@@ -3,10 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TESTING</title>
+    <title>this website is under construction</title>
+    <style>
+        @font-face {
+            font-family: 'Arial Narrow';
+            src: url('fonts/arial-narrow.ttf') format('truetype');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: 'Arial Narrow';
+            src: url('fonts/arial-narrow-bold.ttf') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: 'Arial Narrow';
+            src: url('fonts/arial-narrow-italic.ttf') format('truetype');
+            font-weight: 400;
+            font-style: italic;
+            font-display: swap;
+        }
+
+        @font-face {
+            font-family: 'Arial Narrow';
+            src: url('fonts/arial-narrow-bold-italic.ttf') format('truetype');
+            font-weight: 700;
+            font-style: italic;
+            font-display: swap;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Arial Narrow', Arial, sans-serif;
+            background-color: #ffffff;
+            color: #0000ff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 960px;
+        }
+
+        .title {
+            font-family: 'Arial Narrow', Arial, sans-serif;
+            font-size: clamp(2.5rem, 6.5vw, 4.8rem);
+            font-weight: 400;
+            color: #0000ff;
+            line-height: 1.05;
+            letter-spacing: -0.01em;
+            margin-bottom: 0.4rem;
+        }
+
+        .subtitle {
+            font-family: 'Arial Narrow', Arial, sans-serif;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            font-weight: 400;
+            color: #00c000;
+            margin-bottom: 2rem;
+        }
+
+        .retro-btn {
+            font-family: 'Arial Narrow', Arial, sans-serif;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            padding: 0.5rem 1.4rem;
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: #000000;
+            background: linear-gradient(180deg, #e6e6e6 0%, #c4c4c4 100%);
+            border: 1px solid #000000;
+            box-shadow: inset 1px 1px 0px #ffffff, inset -1px -1px 0px #707070;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.1s ease;
+        }
+
+        .retro-btn:hover {
+            background: linear-gradient(180deg, #f2f2f2 0%, #d0d0d0 100%);
+        }
+
+        .retro-btn:active {
+            background: linear-gradient(180deg, #b8b8b8 0%, #d8d8d8 100%);
+            box-shadow: inset -1px -1px 0px #ffffff, inset 1px 1px 0px #707070;
+        }
+
+        .folder-icon {
+            width: 18px;
+            height: 13px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
 </head>
 <body>
-    <h1>Hi 👋</h1>
-    <p>testing namecheap domain</p>
+    <main class="container">
+        <h1 class="title">this website is under construction</h1>
+        <p class="subtitle">check custom id generator instead &rarr;</p>
+        <a href="https://id.patilshubham.me" class="retro-btn">
+            <svg class="folder-icon" viewBox="0 0 18 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 2.5C1 1.67157 1.67157 1 2.5 1H6.25L8.25 3H15.5C16.3284 3 17 3.67157 17 4.5V10.5C17 11.3284 16.3284 12 15.5 12H2.5C1.67157 12 1 11.3284 1 10.5V2.5Z" stroke="black" stroke-width="1.5" fill="none"/>
+            </svg>
+            id.patilshubham.me
+        </a>
+    </main>
 </body>
 </html>
+
+
+
+
