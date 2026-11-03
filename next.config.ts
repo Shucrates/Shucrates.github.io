@@ -1,12 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Deployed as static files to GitHub Pages (.github/workflows/deploy.yml).
-  output: "export",
-  // Each page is written as /section/index.html, which every static host serves at /section/.
+  // Deployed on Vercel. URLs keep the trailing slash they had as a static export (/section/).
   trailingSlash: true,
-  // There's no server to resize images; the art in /public is already sized for the web.
-  images: { unoptimized: true },
+  images: {
+    // The art in /public is already sized for the web, and album art is shown small.
+    unoptimized: true,
+    // Album art and artist photos from Spotify, Deezer and Apple.
+    remotePatterns: [
+      { protocol: "https", hostname: "i.scdn.co" },
+      { protocol: "https", hostname: "*.dzcdn.net" },
+      { protocol: "https", hostname: "*.mzstatic.com" },
+    ],
+  },
   turbopack: {
     rules: {
       "*.css": {

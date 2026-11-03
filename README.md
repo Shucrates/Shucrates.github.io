@@ -2,8 +2,8 @@
 
 Portfolio site: the things I make things with, laid out around a centered title.
 Each object opens a section of the portfolio.
-Next.js (App Router) + TypeScript + Tailwind CSS + Framer Motion, exported as static files
-and deployed to GitHub Pages (patilshubham.me) by `.github/workflows/deploy.yml` on every push to `main`.
+Next.js (App Router) + TypeScript + Tailwind CSS + Framer Motion, deployed on Vercel
+(patilshubham.me) from `main`.
 
 ```sh
 pnpm install
@@ -22,6 +22,7 @@ pnpm build
 | Object images | `public/objects/` |
 | Camera videos (/shuisbored) | `src/content/shuisbored.ts` |
 | Resume | `public/resume.pdf` |
+| All-time favourite songs (/music) | `src/content/favourites.ts` |
 
 ## Add, remove or replace an object
 
@@ -81,8 +82,47 @@ The model is built from a CC BY Sketchfab asset; see `scripts/camera/README.md`.
 LCD and button positions (in model coordinates) live in
 `src/components/camera/geometry.ts`.
 
+**iPod** (`/music`, code in `src/components/ipod/`): a 3D iPod whose screen runs
+an iPod classic-style menu of what I listen to, and whose click wheel works. Drag round
+the wheel (or scroll over it) to move, press the centre to select, and the edges for
+MENU / ⏮ / ⏭ / ▶❚❚. Cover Flow lines up the album covers of every song it knows;
+select one to flip it over to its songs. Keys: ↑ ↓ scroll, Enter selects, Esc or Backspace goes back,
+Space plays/pauses, ← → skip. Songs play their 30-second preview from Deezer or iTunes.
+
+## Music (Spotify)
+
+The iPod's Now Playing, Top Songs and Top Artists read my Spotify account through
+the `/api/music/*` routes. Visitors never sign in. Without the Spotify env vars the
+iPod still works: it just shows All-Time Favourites and About.
+
+1. **Create a Spotify app** at <https://developer.spotify.com/dashboard>. Add
+   `http://127.0.0.1:3000/callback` as a redirect URI (Spotify doesn't accept
+   `localhost`) and tick "Web API". Copy the client ID and secret.
+2. **Get a refresh token.** Put the ID and secret in `.env.local` (see `.env.example`),
+   stop `pnpm dev` (it uses the same port), then run:
+
+   ```sh
+   node scripts/spotify-auth.ts
+   ```
+
+   Open the URL it prints, sign in as yourself, and copy the
+   `SPOTIFY_REFRESH_TOKEN=...` line it prints into `.env.local`. It asks for
+   `user-read-currently-playing`, `user-read-recently-played` and `user-top-read`.
+   The token lasts until you remove the app's access in your Spotify account settings.
+3. **Set the env vars on Vercel.** In the project's Settings → Environment Variables,
+   add `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` and `SPOTIFY_REFRESH_TOKEN` (for
+   Production and Preview), then redeploy. They're only read on the server.
+
+Now Playing is cached for 30 seconds and the top lists for an hour. Previews come from
+Deezer (by ISRC) or iTunes Search; the iPod only plays their own preview URLs.
+
+**Edit favourites:** change the `{ title, artist, note? }` entries in
+`src/content/favourites.ts`. Spell the title and artist as Spotify does; the artwork
+and preview are found from them. A song with no match shows "No preview available".
+
 ## TODO
 
 - Real Instagram URL in `src/content/site.ts`.
 - Real object cutouts and resume.
 - Videos for the camera.
+- Real all-time favourites in `src/content/favourites.ts`.
