@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Temporary values until the real mockup lands:
+ * reskinning the site should only require editing this file.
+ * Each token becomes a CSS variable and a Tailwind utility
+ * (bg-bg, text-ink, font-label, rounded-pill, p-gutter, ...).
+ */
+@theme {
+  --color-bg: #ffffff;
+  --color-ink: #1a1a1a;
+  --color-ink-muted: #5f5f5f;
+  --color-accent: #d8361e;
+  --color-line: #d4d4d4;
+  --color-blue: #1a1ae6;
+  /* The hero detection box: green on Shubham, orange on the bag (the thing to click). */
+  --color-detect: #19e35c;
+  --color-detect-bag: #ff7a1a;
+
+  --radius-pill: 999px;
+  --radius-soft: 20px;
+
+  --spacing-gutter: clamp(16px, 3vw, 40px);
+  --spacing-header: 88px;
+
+  /* System font: Apple devices have it; others fall back to Helvetica/Arial. */
+  --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --color-select: #b4d5fe;
+
+  --drop-shadow-object: 0 14px 12px rgb(26 26 26 / 0.12);
+
+}
+
+/* Fonts come from next/font in layout.tsx. */
+@theme inline {
+  --font-sans: var(--font-inter-tight), system-ui, sans-serif;
+  --font-label: var(--font-plex-mono), ui-monospace, monospace;
+  /* Tall condensed titling face, for the hero. */
+  --font-condensed: var(--font-cossette), "Arial Narrow", sans-serif;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
