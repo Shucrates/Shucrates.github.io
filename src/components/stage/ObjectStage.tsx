@@ -61,7 +61,8 @@ type Motion = { flight: number; hover: number; pitch: number; yaw: number };
  */
 export function ObjectStage<L>({ config }: { config: StageConfig<L> }) {
   const { store, path, hoverOpen, hoverTurn } = config;
-  const pathname = usePathname();
+  // Static hosting serves pages at /section/, so compare without the trailing slash.
+  const pathname = usePathname().replace(/(.)\/$/, "$1");
   const reducedMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const motion = useRef<Motion>({ flight: 0, hover: 0, pitch: 0, yaw: 0 });
