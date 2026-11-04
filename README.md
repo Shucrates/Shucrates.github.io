@@ -98,7 +98,8 @@ iPod still works: it just shows All-Time Favourites and About.
 1. **Create a Spotify app** at <https://developer.spotify.com/dashboard>. Add
    `http://127.0.0.1:3000/callback` as a redirect URI (Spotify doesn't accept
    `localhost`) and tick "Web API". Copy the client ID and secret.
-2. **Get a refresh token.** Put the ID and secret in `.env.local` (see `.env.example`),
+2. **Get a refresh token.** Put the ID and secret in `.env.local` (git ignores it) as
+   `SPOTIFY_CLIENT_ID=...` and `SPOTIFY_CLIENT_SECRET=...` on their own lines,
    stop `pnpm dev` (it uses the same port), then run:
 
    ```sh
