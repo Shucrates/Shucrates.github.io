@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 /** Seconds each cover stays up before the next fades in. */
 const HOLD = 5;
 /** Start and end framing for each cover; alternated so the pan changes direction. */
-const MOVES = [
+export const MOVES = [
   { from: { scale: 1.05, x: "-3%", y: "2%" }, to: { scale: 1.25, x: "3%", y: "-3%" } },
   { from: { scale: 1.25, x: "3%", y: "-2%" }, to: { scale: 1.05, x: "-2%", y: "3%" } },
 ];

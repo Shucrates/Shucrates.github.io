@@ -2,7 +2,7 @@
 
 import { AnimatePresence, MotionConfig, motion, type Variants } from "framer-motion";
 import { useEffect, useImperativeHandle, useState, type Ref } from "react";
-import { BODY, SCREEN, albumsOf, listLayout, moveTo, rowsOf, songCount, titleOf, type Action, type Frame, type View } from "../menu";
+import { BODY, SCREEN, albumsOf, coversOf, listLayout, moveTo, rowsOf, songCount, titleOf, type Action, type Frame, type View } from "../menu";
 import { player, usePlayer } from "../player-store";
 import { tick } from "../useClickSound";
 import { useMusic } from "../useMusic";
@@ -117,8 +117,7 @@ export function IpodScreen({ ref, width, height }: Props) {
   };
 
   const list = { label: titleOf(view), rows, cursor: top.cursor, first: top.first, ...listLayout(view), onPick: pick };
-  const artwork = [live?.track.artworkUrl, ...[music.topTracks, music.favourites].flatMap((l) => (l.status === "ok" ? l.data.map((t) => t.artworkUrl) : []))];
-  const covers = [...new Set(artwork.filter((url): url is string => Boolean(url)))];
+  const covers = coversOf(music);
 
   // Cover Flow and the album flipped over in it are one screen: the flip replaces the slide.
   const below = nav.stack[nav.stack.length - 2];

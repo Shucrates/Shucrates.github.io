@@ -105,6 +105,13 @@ export function tracksBy(artist: Artist, tracks: Track[]) {
   return tracks.filter((track) => track.artist.split(", ").includes(artist.name));
 }
 
+/** Album art for the main menu's slideshow: what's playing on Spotify first, then my lists. */
+export function coversOf(music: Music): string[] {
+  const live = music.nowPlaying.status === "ok" ? music.nowPlaying.data?.track.artworkUrl : null;
+  const lists = [music.topTracks, music.favourites].flatMap((l) => (l.status === "ok" ? l.data.map((t) => t.artworkUrl) : []));
+  return [...new Set([live, ...lists].filter((url): url is string => Boolean(url)))];
+}
+
 /** Every song the iPod knows, grouped by album, in the order they're first listed. */
 export function albumsOf(music: Music): Album[] {
   const albums = new Map<string, Album>();

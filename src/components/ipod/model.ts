@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import type { StageModel } from "@/components/stage/ObjectStage";
 import type { Box } from "@/components/stage/store";
+import { SCREEN } from "./menu";
+import { defaultHome, drawHomeScreen, loadHome } from "./screen/home-screen";
 
 /*
  * A classic-style iPod, built from primitives: silver anodised front, click wheel,
@@ -53,37 +55,15 @@ function canvasTexture(width: number, height: number, draw: (ctx: CanvasRenderin
 
 const FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 
-/** The menu the screen shows when it wakes on the homepage. */
+/** The iPod's main menu, as /music first shows it; redrawn once the music has loaded. */
 function homeScreen() {
-  return canvasTexture(324, 244, (ctx) => {
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, 324, 244);
-    const bar = ctx.createLinearGradient(0, 0, 0, 30);
-    bar.addColorStop(0, "#f4f5f7");
-    bar.addColorStop(1, "#c9ced6");
-    ctx.fillStyle = bar;
-    ctx.fillRect(0, 0, 324, 30);
-    ctx.fillStyle = "#111";
-    ctx.font = `600 16px ${FONT}`;
-    ctx.textAlign = "center";
-    ctx.fillText("iPod", 162, 21);
-    const items = ["Music", "Artists", "On Repeat", "Shuffle Songs", "Settings"];
-    ctx.textAlign = "left";
-    ctx.font = `500 17px ${FONT}`;
-    items.forEach((item, i) => {
-      const y = 30 + i * 32;
-      if (i === 0) {
-        const highlight = ctx.createLinearGradient(0, y, 0, y + 32);
-        highlight.addColorStop(0, "#5aa2f0");
-        highlight.addColorStop(1, "#1f6fd1");
-        ctx.fillStyle = highlight;
-        ctx.fillRect(0, y, 324, 32);
-      }
-      ctx.fillStyle = i === 0 ? "#fff" : "#111";
-      ctx.fillText(item, 12, y + 22);
-      ctx.fillText("›", 300, y + 22);
-    });
+  const texture = canvasTexture(SCREEN.width, SCREEN.height, (ctx) => drawHomeScreen(ctx, defaultHome()));
+  void loadHome().then((home) => {
+    // Same context, so it's still scaled 2× from canvasTexture.
+    drawHomeScreen((texture.image as HTMLCanvasElement).getContext("2d")!, home);
+    texture.needsUpdate = true;
   });
+  return texture;
 }
 
 function wheelLabels() {

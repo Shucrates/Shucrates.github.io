@@ -16,10 +16,27 @@ export type Resource = keyof Music;
 /** How often the live Now Playing is asked for again; the route is cached for as long. */
 const NOW_PLAYING_POLL_MS = 30_000;
 
-async function load<T>(path: string): Promise<Loadable<T>> {
+export const MUSIC_PATHS: Record<Resource, string> = {
+  nowPlaying: "/api/music/now-playing/",
+  topTracks: "/api/music/top-tracks/",
+  topArtists: "/api/music/top-artists/",
+  favourites: "/api/music/favourites/",
+};
+
+/**
+ * The last answer from each path, so the iPod opens showing what its homepage screen
+ * already fetched instead of loading it again.
+ */
+const latest = new Map<string, Loadable<unknown>>();
+
+export async function load<T>(path: string): Promise<Loadable<T>> {
   try {
     const res = await fetch(path);
-    if (res.ok) return { status: "ok", data: (await res.json()) as T };
+    if (res.ok) {
+      const loaded: Loadable<T> = { status: "ok", data: (await res.json()) as T };
+      latest.set(path, loaded);
+      return loaded;
+    }
     const body = (await res.json().catch(() => null)) as MusicError | null;
     return { status: body?.error === "not-configured" ? "off" : "error" };
   } catch {
@@ -28,7 +45,7 @@ async function load<T>(path: string): Promise<Loadable<T>> {
 }
 
 function useResource<T>(path: string, pollMs?: number) {
-  const [state, setState] = useState<Loadable<T>>({ status: "loading" });
+  const [state, setState] = useState<Loadable<T>>(() => (latest.get(path) as Loadable<T> | undefined) ?? { status: "loading" });
   useEffect(() => {
     let live = true;
     // A failed refresh keeps what's already showing.
@@ -50,10 +67,10 @@ function useResource<T>(path: string, pollMs?: number) {
 
 /** Everything the iPod shows, fetched once (Now Playing kept fresh), with a retry per piece. */
 export function useMusic() {
-  const [nowPlaying, reloadNowPlaying] = useResource<NowPlaying | null>("/api/music/now-playing/", NOW_PLAYING_POLL_MS);
-  const [topTracks, reloadTopTracks] = useResource<Track[]>("/api/music/top-tracks/");
-  const [topArtists, reloadTopArtists] = useResource<Artist[]>("/api/music/top-artists/");
-  const [favourites, reloadFavourites] = useResource<Track[]>("/api/music/favourites/");
+  const [nowPlaying, reloadNowPlaying] = useResource<NowPlaying | null>(MUSIC_PATHS.nowPlaying, NOW_PLAYING_POLL_MS);
+  const [topTracks, reloadTopTracks] = useResource<Track[]>(MUSIC_PATHS.topTracks);
+  const [topArtists, reloadTopArtists] = useResource<Artist[]>(MUSIC_PATHS.topArtists);
+  const [favourites, reloadFavourites] = useResource<Track[]>(MUSIC_PATHS.favourites);
   const music: Music = { nowPlaying, topTracks, topArtists, favourites };
   const reloads: Record<Resource, () => void> = {
     nowPlaying: reloadNowPlaying,
