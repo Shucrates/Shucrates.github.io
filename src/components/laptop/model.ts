@@ -19,6 +19,12 @@ const LID = { shut: Math.PI / 2, hover: Math.PI / 2 - THREE.MathUtils.degToRad(2
 
 export type LaptopLayout = { screen: Box };
 
+/** Sleeping or shutting down the Mac turns its display off; it comes back on once the lid is shut. */
+let screenOn = true;
+export const switchOffScreen = () => {
+  screenOn = false;
+};
+
 let source: Promise<THREE.Group> | null = null;
 const loadSource = () => (source ??= new GLTFLoader().loadAsync(MODEL_URL).then((gltf) => gltf.scene));
 
@@ -31,6 +37,8 @@ export async function loadLaptopModel(): Promise<StageModel<LaptopLayout>> {
     return node;
   };
   const shell = find("lid-shell");
+  const screen = (find("screen") as THREE.Mesh).material as THREE.MeshStandardMaterial;
+  const lit = { color: screen.color.clone(), emissive: screen.emissiveIntensity };
   const local = shell.parent!;
   const hinge = new THREE.Group();
   hinge.position.set(0, HINGE.y, HINGE.z);
@@ -76,6 +84,9 @@ export async function loadLaptopModel(): Promise<StageModel<LaptopLayout>> {
     pose: (hover, dock) => {
       const homeAngle = THREE.MathUtils.lerp(LID.shut, LID.hover, hover);
       hinge.rotation.x = THREE.MathUtils.lerp(homeAngle, 0, THREE.MathUtils.smoothstep(dock, 0, 0.8));
+      if (dock === 0) screenOn = true;
+      screen.color.copy(lit.color).multiplyScalar(screenOn ? 1 : 0.02);
+      screen.emissiveIntensity = screenOn ? lit.emissive : 0;
     },
     layout: (project) => {
       const points = corners().map(project);

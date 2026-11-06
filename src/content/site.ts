@@ -27,6 +27,10 @@ export const site = {
       label: "MacBook Air M2 model by rtql8d, CC BY 4.0, modified",
       href: "https://sketchfab.com/3d-models/macbook-air-m2-786fa23d402a4f90ae36c4168997f9cc",
     },
+    folder: {
+      label: "Document file folder model by Kami Rapacz, CC BY 4.0, modified",
+      href: "https://sketchfab.com/3d-models/document-file-folder-11390179bba7462484d344e2fe22c703",
+    },
   } satisfies Record<string, Credit>,
   links: [
     { label: "Resume", href: "/resume.pdf", external: true },

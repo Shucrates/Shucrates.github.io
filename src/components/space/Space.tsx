@@ -4,6 +4,7 @@ import { motion, type TargetAndTransition, type Transition } from "framer-motion
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BagSpin, CLOSING_SCALE } from "@/components/hero/BagSpin";
+import { launchOnClick } from "@/components/stage/ObjectStage";
 import { stages } from "@/components/stage/Stages";
 import type { SpaceObject } from "@/content/objects";
 import { site } from "@/content/site";
@@ -200,6 +201,7 @@ export function Space({ objects, origin, bagArriving, onClosed }: Props) {
             {i > 0 && <span aria-hidden>/</span>}
             <Link
               href={`/${object.section}`}
+              onClick={launchOnClick(object.interaction && stages[object.interaction])}
               onPointerEnter={() => onActiveChange(true)}
               onPointerLeave={() => onActiveChange(false)}
               onFocus={() => onActiveChange(true)}

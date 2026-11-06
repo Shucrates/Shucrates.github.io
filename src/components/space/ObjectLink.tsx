@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, MotionConfig, type Variants } from "framer-motion";
+import { launchOnClick } from "@/components/stage/ObjectStage";
 import { StageAnchor } from "@/components/stage/StageAnchor";
 import { stages } from "@/components/stage/Stages";
 import type { HoverAnimation, SpaceObject } from "@/content/objects";
@@ -54,6 +55,7 @@ export function ObjectLink({ object, active, onActiveChange }: Props) {
       <MotionLink
         href={href}
         aria-label={`${name} — ${object.section}`}
+        onClick={launchOnClick(object.interaction && stages[object.interaction])}
         initial="rest"
         animate={active ? "hover" : "rest"}
         onPointerEnter={() => onActiveChange(true)}

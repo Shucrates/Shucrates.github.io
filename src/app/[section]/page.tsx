@@ -5,7 +5,7 @@ import { findObjectBySection, objects } from "@/content/objects";
 
 export const dynamicParams = false;
 
-/** Interactive objects have their own route folder, e.g. src/app/shuisbored. */
+/** Interactive and drawn objects have their own route folder, e.g. src/app/shuisbored. */
 export function generateStaticParams() {
   return objects.filter((object) => !object.interaction).map((object) => ({ section: object.section }));
 }

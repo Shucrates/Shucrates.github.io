@@ -47,5 +47,5 @@ export const BUTTONS: { id: CameraButton; label: string; x: number; z: number; r
 ];
 export const BUTTONS_Y = 0.355;
 
-/** How much of the viewport the camera back may fill on /shuisbored. */
-export const STAGE_FIT = { width: 0.94, height: 0.8 };
+/** How much of the viewport the camera back fills on the /shuisbored title screen; episodes move it from there. */
+export const STAGE_FIT = { width: 0.58, height: 0.62 };

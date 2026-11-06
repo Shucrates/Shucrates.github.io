@@ -44,6 +44,8 @@ next-env.d.ts
 
 # raw source media for the 3D models and photos (compressed copies live in public/)
 /canon camera assets/
+/shuisbored bored files videos backup/
+/shubham graphic design posters/
 
 # editor tooling
 .serena/

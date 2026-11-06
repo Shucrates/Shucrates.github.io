@@ -38,16 +38,51 @@
   --font-label: var(--font-plex-mono), ui-monospace, monospace;
   /* Tall condensed titling face, for the hero. */
   --font-condensed: var(--font-cossette), "Arial Narrow", sans-serif;
+  /* Condensed serif for /shuisbored; small print there is narrow. */
+  --font-serif: var(--font-instrument-serif), Georgia, serif;
+  --font-narrow: var(--font-arial-narrow), "Arial Narrow", sans-serif;
 }
 
 html,
 body {
   background: var(--color-bg);
   color: var(--color-ink);
-  overflow-x: hidden;
+  /* clip, not hidden: hidden makes body a scroll container and breaks position: sticky. */
+  overflow-x: clip;
 }
 
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 4px;
+}
+
+/*
+ * A launching 3D object (see `launch` in ObjectStage) blurs the homepage and the other
+ * objects away behind it as it flies in, and clears them again as it flies home.
+ * Timing matches the object's flight. Faded with the filter, not `opacity`, which the
+ * canvases set inline.
+ */
+main,
+canvas[data-stage] {
+  transition: filter 1.15s cubic-bezier(0.65, 0, 0.3, 1);
+}
+
+html[data-backdrop] :is(main, canvas[data-stage]:not([data-launcher])) {
+  filter: blur(16px) opacity(0);
+}
+
+html[data-backdrop-still] :is(main, canvas[data-stage]) {
+  transition: none;
+}
+
+/* Reduced motion: a plain crossfade. */
+@media (prefers-reduced-motion: reduce) {
+  main,
+  canvas[data-stage] {
+    transition-duration: 0.3s;
+  }
+
+  html[data-backdrop] :is(main, canvas[data-stage]:not([data-launcher])) {
+    filter: opacity(0);
+  }
 }

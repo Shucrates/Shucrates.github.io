@@ -20,7 +20,8 @@ pnpm build
 | Title, hashtag, name, tagline, top-bar links | `src/content/site.ts` |
 | Colors, fonts, radii, spacing, shadow | `src/app/globals.css` (`@theme` block) |
 | Object images | `public/objects/` |
-| Camera videos (/shuisbored) | `src/content/shuisbored.ts` |
+| Camera episodes and /shuisbored copy | `src/content/episodes.ts` |
+| Stats and follower counts quoted in both | `src/content/numbers.ts` |
 | Resume | `public/resume.pdf` |
 | All-time favourite songs (/music) | `src/content/favourites.ts` |
 
@@ -64,20 +65,49 @@ folder (e.g. `src/app/shuisbored/`) and is skipped by the generic `[section]` pa
 Canon PowerShot SX510 HS (three.js). One `<CameraStage>` in the root layout draws
 it across pages: on `/` it sits in its slot and hovering extends the lens and opens
 the lens cover; going to `/shuisbored` turns it around and fills the screen with its
-back, where the LCD plays videos and its buttons work; going back flies it home.
+back, where the LCD becomes an episode player for @shuisbored; going back flies it home.
+
+The page opens on a title screen that doesn't scroll, with the camera in the
+middle showing the episode grid. Picking one (click it, or move with ◂ ▸ and
+press FUNC.SET) flies the camera into the bottom-right corner and switches
+to the episode view (`src/components/journey/Story.tsx`): one screen per episode,
+its lines rising in as it arrives and fading out as it leaves. Each scroll or
+swipe moves one episode, and the corner camera plays whichever is on screen.
+Hovering the small camera grows it and turns it a little; clicking it goes back
+to the title screen with the episode grid open. "[go back]" also returns to the
+title screen. "sound : [on]" at the top right mutes the video (so
+does M). Playback state lives in `src/components/camera/player-store.ts`.
 
 | Button | Key | Does |
 | --- | --- | --- |
-| dial ◂ ▸ | ← → | previous / next video (moves the cursor when the menu is open) |
-| dial ▴ ▾ | ↑ ↓ | move the menu cursor |
-| FUNC.SET | Enter | play/pause, or pick the highlighted video in the menu |
+| dial ◂ ▸ | ← → | previous / next episode (moves the cursor in the grid) |
+| dial ▴ ▾ | ↑ ↓ (grid open) | move the grid cursor a row |
+| FUNC.SET | Enter | open the episode, or play/pause |
 | ▶ (playback) | Space | play/pause |
-| (( )) Wi-Fi | R | restart the video |
-| MENU | M | open/close the video list |
+| MENU | | open/close the episode grid |
+| (( )) Wi-Fi | R | restart the episode |
 | frame button (top left) | I | show/hide the on-screen info |
-| | Esc | close the menu, then go back to the space |
+| | M | mute/unmute (remembered on this device) |
+| | Esc | back one step: grid, episode view, then the space |
 
-Add videos to `src/content/shuisbored.ts` (mp4/webm under `public/videos/` or a URL).
+**Add an episode:** only add the ones that moved the story along; each gets
+its own screen in the episode view. Append an entry to `episodes` in `src/content/episodes.ts`, in
+order. Put the mp4 in `public/videos/` and its poster in `public/videos/posters/`,
+then set `src` and `poster` to their paths (e.g. `/videos/id-card.mp4`).
+`src: null` shows "video to be added" over the poster. `orientation: "vertical"`
+centres a 9:16 video over a blurred copy of itself, and `captions` takes a WebVTT
+path. `stats` show under the story, and `link` adds a link under that.
+
+**Change the copy:** the title screen is `show` and each episode's text is its
+`story` (a paragraph per entry) and optional `link`, all in
+`src/content/episodes.ts`. Numbers (views, followers, ...) come from
+`src/content/numbers.ts`, so update them there.
+
+**Host the videos elsewhere:** `src` and `poster` accept full URLs, so moving to a
+CDN or blob store means uploading the files and swapping the paths; nothing in
+the components changes. Use plain mp4 (H.264 + AAC), `+faststart` so playback
+starts before the download ends.
+
 The model is built from a CC BY Sketchfab asset; see `scripts/camera/README.md`.
 LCD and button positions (in model coordinates) live in
 `src/components/camera/geometry.ts`.

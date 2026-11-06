@@ -3,6 +3,10 @@ export type CaseStudySection = {
   body: string;
 };
 
+/** Filters in the Finder sidebar, in order. A project can have several. */
+export const TAGS = ["Design", "Web/App", "AI/ML", "Research"] as const;
+export type Tag = (typeof TAGS)[number];
+
 export type Project = {
   id: string;
   title: string;
@@ -11,6 +15,7 @@ export type Project = {
   year: number;
   /** e.g. "Brand identity", "Product design"; shown as the folder's kind in Finder. */
   kind: string;
+  tags: Tag[];
   /** Demo video: path under /public (e.g. "/projects/one.mp4") or a full URL. `null` shows a placeholder. */
   video: string | null;
   /** Optional still shown before the video loads. */
@@ -31,9 +36,10 @@ const placeholderStudy = (role: string): Project["caseStudy"] => ({
   duration: "TBD",
   tools: ["Figma", "Next.js"],
   sections: [
-    { heading: "The brief", body: "What the project needed to do, and for whom." },
-    { heading: "The process", body: "How I got there: research, sketches, the dead ends and the turns." },
-    { heading: "The outcome", body: "What shipped, and what changed because of it." },
+    { heading: "Overview", body: "What the project is, who it was for, and my part in it." },
+    { heading: "Problem", body: "What wasn't working, and why it mattered." },
+    { heading: "Process", body: "How I got there: research, sketches, the dead ends and the turns." },
+    { heading: "Outcome", body: "What shipped, and what changed because of it." },
   ],
 });
 
@@ -45,6 +51,7 @@ export const projects: Project[] = [
     summary: "Brand identity and website",
     year: 2026,
     kind: "Brand identity",
+    tags: ["Design", "Web/App"],
     video: null,
     caseStudy: placeholderStudy("Designer and developer"),
     href: null,
@@ -55,6 +62,7 @@ export const projects: Project[] = [
     summary: "Product design for a mobile app",
     year: 2025,
     kind: "Product design",
+    tags: ["Design", "Web/App"],
     video: null,
     caseStudy: placeholderStudy("Product designer"),
     href: null,
@@ -65,6 +73,7 @@ export const projects: Project[] = [
     summary: "Creative coding experiment",
     year: 2025,
     kind: "Creative coding",
+    tags: ["Web/App", "AI/ML"],
     video: null,
     caseStudy: placeholderStudy("Developer"),
     href: null,
@@ -75,8 +84,11 @@ export const projects: Project[] = [
     summary: "Editorial design system",
     year: 2024,
     kind: "Design system",
+    tags: ["Design", "Research"],
     video: null,
     caseStudy: placeholderStudy("Designer"),
     href: null,
   },
 ];
+
+export const findProject = (id: string) => projects.find((project) => project.id === id);

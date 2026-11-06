@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Cossette_Titre, IBM_Plex_Mono, Inter_Tight } from "next/font/google";
+import { Cossette_Titre, IBM_Plex_Mono, Instrument_Serif, Inter_Tight } from "next/font/google";
+import localFont from "next/font/local";
 import { LinkBar } from "@/components/LinkBar";
 import { Stages } from "@/components/stage/Stages";
 import { site } from "@/content/site";
@@ -22,6 +23,17 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
+});
+
+const arialNarrow = localFont({
+  variable: "--font-arial-narrow",
+  src: "../../fonts/arial-narrow.ttf",
+});
+
 export const metadata: Metadata = {
   title: { default: site.title, template: `%s · ${site.title}` },
   description: `${site.name}, ${site.tagline}.`,
@@ -29,7 +41,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${interTight.variable} ${plexMono.variable} ${cossette.variable} antialiased`}>
+    <html lang="en" className={`${interTight.variable} ${plexMono.variable} ${cossette.variable} ${arialNarrow.variable} ${instrumentSerif.variable} antialiased`}>
       <body className="min-h-dvh font-sans">
         <LinkBar />
         <main>{children}</main>

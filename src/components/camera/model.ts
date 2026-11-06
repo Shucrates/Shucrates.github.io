@@ -7,6 +7,8 @@ import { BUTTONS, BUTTONS_Y, LCD, LENS, MODEL_URL, NODES, type CameraButton } fr
 /** Where the LCD and buttons land on screen once the camera is docked on /shuisbored. */
 export type ScreenLayout = {
   lcd: Box;
+  /** The LCD's corners on screen: top-left, top-right, bottom-right, bottom-left. Not a rectangle once the camera turns. */
+  lcdCorners: { x: number; y: number }[];
   buttons: { id: CameraButton; label: string; box: Box }[];
 };
 
@@ -115,7 +117,7 @@ export async function loadCameraModel(): Promise<StageModel<ScreenLayout>> {
         const radius = Math.hypot(rim.x - c.x, rim.y - c.y);
         return { id, label, box: { left: c.x - radius, top: c.y - radius, width: radius * 2, height: radius * 2 } };
       });
-      return { lcd, buttons };
+      return { lcd, lcdCorners: corners, buttons };
     },
   };
 }

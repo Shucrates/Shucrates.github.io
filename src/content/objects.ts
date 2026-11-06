@@ -2,7 +2,7 @@
 export type HoverAnimation = "none" | "lift" | "pulse" | "swing" | "tilt" | "shuffle" | "wobble";
 
 /** Objects with their own art and click behaviour, instead of an image and a plain link. */
-export type Interaction = "camera" | "laptop" | "card" | "medal" | "ipod";
+export type Interaction = "camera" | "laptop" | "card" | "medal" | "ipod" | "folder";
 
 export type SpaceObject = {
   id: string;
@@ -122,17 +122,18 @@ export const objects: SpaceObject[] = [
     id: "posters",
     label: "posters",
     name: "posters",
-    section: "design",
-    description: "A stack of graphic design prints.",
-    image: "/objects/posters.png",
-    alt: "A stack of graphic design posters",
-    width: 800,
+    section: "posters",
+    description: "A folder of graphic design posters.",
+    image: null,
+    alt: "A manila folder stuffed with paper",
+    width: 700,
     height: 1000,
-    scale: 1.05,
+    scale: 1.1,
     order: 4,
     x: 14,
     y: 76,
-    hover: "shuffle",
+    hover: "none",
+    interaction: "folder",
   },
   {
     id: "experience",

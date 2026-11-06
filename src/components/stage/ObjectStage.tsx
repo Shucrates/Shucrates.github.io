@@ -1,11 +1,12 @@
 "use client";
 
 import { animate, useReducedMotion, type ValueAnimationTransition } from "framer-motion";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useStage, type Box, type StageStore } from "./store";
 import { createStudio } from "./studio";
+import { useMedia } from "./useMedia";
 
 /** Projects a world-space point to CSS pixels. */
 export type Project = (point: THREE.Vector3) => { x: number; y: number };
@@ -39,8 +40,15 @@ export type StageConfig<L> = {
   hoverTurn: { pitch: number; yaw: number };
   /** How the hover pose opens; it always closes with a short ease. */
   hoverOpen: ValueAnimationTransition<number>;
-  /** How much of the viewport the docked face may fill. */
-  fit: { width: number; height: number };
+  /** How much of the viewport the docked face may fill, and how many CSS px to keep clear on every side. */
+  fit: { width: number; height: number; inset?: number };
+  /**
+   * Clicked on the homepage, the object flies in before the route changes and the homepage
+   * blurs away behind it, then clears again as it flies home (see `launchOnClick`).
+   */
+  launch?: boolean;
+  /** Media query the viewport must match for the object to dock; otherwise its page shows without it. */
+  dockWhen?: string;
   /** Euler order for the object's rotation; "ZYX" twists before it swings, like something hanging. */
   rotationOrder?: THREE.EulerOrder;
 };
@@ -54,13 +62,44 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 type Motion = { flight: number; hover: number; pitch: number; yaw: number };
 
+/** For links to a launching object's page: a plain click flies the object in, then navigates. */
+export function launchOnClick(
+  config: { launch?: boolean; dockWhen?: string; store: { set: (patch: { launching: boolean }) => void } } | undefined,
+) {
+  if (!config?.launch) return undefined;
+  return (event: React.MouseEvent) => {
+    if (config.dockWhen && !matchMedia(config.dockWhen).matches) return;
+    // New tabs and windows just follow the link.
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    config.store.set({ launching: true });
+  };
+}
+
+/**
+ * Blurs (or clears) the homepage and the other objects behind a launching one; see the
+ * `data-backdrop` rules in globals.css. `animated: false` jumps there instead.
+ */
+function backdrop(blurred: boolean, animated = true) {
+  const html = document.documentElement;
+  html.toggleAttribute("data-backdrop-still", !animated);
+  html.toggleAttribute("data-backdrop", blurred);
+  if (!animated) {
+    // Apply the jump before transitions come back on.
+    for (const element of document.querySelectorAll("main, canvas[data-stage]")) void getComputedStyle(element).filter;
+    html.removeAttribute("data-backdrop-still");
+  }
+}
+
 /**
  * One 3D object for the whole site, mounted in the root layout so it survives
  * page changes. On "/" it sits in the slot registered by <StageAnchor>; on its
  * own page it flies to the middle and fills the screen; going back flies it home.
  */
 export function ObjectStage<L>({ config }: { config: StageConfig<L> }) {
-  const { store, path, hoverOpen, hoverTurn } = config;
+  const { store, path, hoverOpen, hoverTurn, launch, dockWhen } = config;
+  const fits = useMedia(dockWhen);
+  const router = useRouter();
   // Static hosting serves pages at /section/, so compare without the trailing slash.
   const pathname = usePathname().replace(/(.)\/$/, "$1");
   const reducedMotion = useReducedMotion();
@@ -68,16 +107,41 @@ export function ObjectStage<L>({ config }: { config: StageConfig<L> }) {
   const motion = useRef<Motion>({ flight: 0, hover: 0, pitch: 0, yaw: 0 });
   const lastHome = useRef<Box | null>(null);
   const active = useStage(store, (s) => s.active);
+  const launching = useStage(store, (s) => s.launching);
   const [layer, setLayer] = useState<"hidden" | "home" | "flying" | "docked">("hidden");
 
-  // Flight target follows the route.
-  useEffect(() => {
-    const docked = pathname === path;
+  // Flight target follows the route, or a launch from the homepage. A layout effect, so the
+  // backdrop is set before the new page paints.
+  useLayoutEffect(() => {
+    // Its page and anything under it, e.g. /projects/one.
+    const onPage = (pathname === path || pathname.startsWith(`${path}/`)) && fits;
     const m = motion.current;
+    if (launch) {
+      // The page itself never blurs: a filtered <main> would also offset its fixed layers.
+      if (onPage) backdrop(false, false);
+      else if (launching) backdrop(true);
+      else if (m.flight > 0 && pathname === "/") {
+        backdrop(true, false);
+        backdrop(false);
+      }
+    }
+    if (onPage && launching) store.set({ launching: false });
+    const docked = onPage || launching;
     const target = docked ? 1 : 0;
+    // Landed on the homepage; the page follows.
+    const arrive = () => {
+      if (docked && !onPage) router.push(path);
+    };
     const hasHome = store.get().anchor !== null || lastHome.current !== null;
     if (reducedMotion || !hasHome || m.flight === target) {
+      // Reduced motion crossfades: the homepage fades out, then the page fades in.
+      if (docked && !onPage) {
+        const timeout = setTimeout(arrive, reducedMotion ? 300 : 0);
+        return () => clearTimeout(timeout);
+      }
       m.flight = target;
+      // The layer follows the route, which only effects see.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLayer(docked ? "docked" : "home");
       return;
     }
@@ -86,10 +150,13 @@ export function ObjectStage<L>({ config }: { config: StageConfig<L> }) {
     const animation = animate(m.flight, target, {
       ...FLIGHT,
       onUpdate: (value) => (m.flight = value),
-      onComplete: () => setLayer(docked ? "docked" : "home"),
+      onComplete: () => {
+        setLayer(docked ? "docked" : "home");
+        arrive();
+      },
     });
     return () => animation.stop();
-  }, [pathname, path, store, reducedMotion]);
+  }, [pathname, path, fits, store, reducedMotion, launch, launching, router]);
 
   // Hover plays the object's own animation and turns it a little; anything else undoes it.
   useEffect(() => {
@@ -119,6 +186,8 @@ export function ObjectStage<L>({ config }: { config: StageConfig<L> }) {
     <canvas
       ref={canvasRef}
       aria-hidden
+      data-stage
+      data-launcher={launch || undefined}
       className={`pointer-events-none fixed inset-0 h-dvh w-full ${hidden ? "invisible" : ""} ${
         layer === "flying" ? "z-50" : layer === "docked" ? "z-40" : "z-10"
       }`}
@@ -176,7 +245,7 @@ function startRenderer<L>(
       view.aspect = w / h;
       view.updateProjectionMatrix();
     }
-    const { anchor, presence, spin, tilt, dock } = store.get();
+    const { anchor, presence, spin, tilt, dock, shift } = store.get();
     if (anchor) {
       const r = anchor.getBoundingClientRect();
       lastHome.current = { left: r.left, top: r.top, width: r.width, height: r.height };
@@ -186,7 +255,7 @@ function startRenderer<L>(
 
     // Nothing moved: skip the frame. Three of these run at once, so idle ones should be free.
     const key = [w, h, home.left, home.top, home.width, presence, t, motion.hover, motion.pitch, motion.yaw, spin, tilt]
-      .concat(dock ? Object.values(dock).flat() : [])
+      .concat(dock ? Object.values(dock).flat() : [], shift ? Object.values(shift) : [])
       .join();
     if (key === drawn) return;
     drawn = key;
@@ -194,10 +263,12 @@ function startRenderer<L>(
     // World units per CSS pixel on the z = 0 plane.
     const unit = (2 * DISTANCE * Math.tan(THREE.MathUtils.degToRad(FOV / 2))) / h;
     const { face } = model;
+    const inset = 2 * (fit.inset ?? 0);
+    const fill = Math.min((w * fit.width - inset) / face.width, (h * fit.height - inset) / face.height);
     const target = dock ?? {
-      x: w / 2,
-      y: h / 2,
-      width: Math.min((w * fit.width) / face.width, (h * fit.height) / face.height),
+      x: w / 2 + (shift?.x ?? 0),
+      y: h / 2 + (shift?.y ?? 0),
+      width: fill * (shift?.scale ?? 1),
       pitch: docked.pitch + tilt,
       yaw: docked.yaw + spin,
       roll: docked.roll,

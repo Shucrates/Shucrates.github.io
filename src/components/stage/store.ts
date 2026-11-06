@@ -16,6 +16,8 @@ export type Dock = {
   deform?: number[];
 };
 
+export type Shift = { x: number; y: number; scale: number };
+
 export type StageState<L> = {
   /** The homepage slot the object sits in; `null` when it isn't on the page. */
   anchor: HTMLElement | null;
@@ -23,6 +25,8 @@ export type StageState<L> = {
   active: boolean;
   /** Opacity while the object sits on the homepage; fades it in with the other objects. */
   presence: number;
+  /** Clicked on the homepage and flying in ahead of its page (see `launch` in ObjectStage). */
+  launching: boolean;
   /** Has finished flying onto its page. */
   landed: boolean;
   /** Extra turn (radians) once docked, e.g. the dragged card. Applied as is, so callers smooth it. */
@@ -31,13 +35,15 @@ export type StageState<L> = {
   tilt: number;
   /** Replaces the default docked pose (centred, filling the screen) when set. */
   dock: Dock | null;
+  /** Moves (CSS pixels) and scales the default docked pose, e.g. the camera shrinking into a corner. Ignored when `dock` is set. */
+  shift: Shift | null;
   /** Where the object's interactive parts are on screen once docked; null otherwise. */
   layout: L | null;
 };
 
 export type StageStore<L> = ReturnType<typeof createStageStore<L>>;
 
-const initial = { anchor: null, active: false, presence: 1, landed: false, spin: 0, tilt: 0, dock: null, layout: null };
+const initial = { anchor: null, active: false, presence: 1, launching: false, landed: false, spin: 0, tilt: 0, dock: null, shift: null, layout: null };
 
 /** A tiny external store per 3D object, shared by its stage, its homepage slot and its page. */
 export function createStageStore<L>() {
