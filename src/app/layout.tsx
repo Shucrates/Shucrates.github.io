@@ -37,6 +37,7 @@ const arialNarrow = localFont({
 export const metadata: Metadata = {
   title: { default: site.title, template: `%s · ${site.title}` },
   description: `${site.name}, ${site.tagline}.`,
+  verification: { google: "wvYt3FVXR277Ij9vK1OXZC0lJIDIM6-VBXmqbcjIUVc" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
