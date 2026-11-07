@@ -8,11 +8,41 @@ export type Achievement = {
   href: string | null;
 };
 
-// TODO: replace with the real achievements.
+/** Recognition the projects received, newest first. */
 export const achievements: Achievement[] = [
-  { id: "achievement-1", title: "Achievement One", issuer: "Organisation", year: 2026, href: null },
-  { id: "achievement-2", title: "Achievement Two", issuer: "Organisation", year: 2025, href: null },
-  { id: "achievement-3", title: "Achievement Three", issuer: "Organisation", year: 2025, href: null },
-  { id: "achievement-4", title: "Achievement Four", issuer: "Organisation", year: 2024, href: null },
-  { id: "achievement-5", title: "Achievement Five", issuer: "Organisation", year: 2023, href: null },
+  {
+    id: "demos-anon",
+    title: "Speaker, Demos Anon",
+    issuer: "Dogpatch Labs, Dublin",
+    year: 2026,
+    href: "/projects/id-card/",
+  },
+  {
+    id: "sarvam-top-12",
+    title: "Top 12, Sarvam BuildIn' Hours",
+    issuer: "Sarvam AI, Bengaluru",
+    year: 2026,
+    href: "/projects/praman/",
+  },
+  {
+    id: "ieee-paper",
+    title: "Published paper, ICCUBEA 2025",
+    issuer: "IEEE Xplore",
+    year: 2025,
+    href: "/projects/speaker-encoder/",
+  },
+  {
+    id: "isro-chairman",
+    title: "Presented SeaGuard to ISRO's Chairman",
+    issuer: "Dr. V. Narayanan, ISRO",
+    year: 2025,
+    href: "/projects/seaguard/",
+  },
+  {
+    id: "hackcelestial",
+    title: "Most Product Readiness, HackCelestial 2.0",
+    issuer: "Pillai College of Engineering",
+    year: 2025,
+    href: "/projects/seaguard/",
+  },
 ];

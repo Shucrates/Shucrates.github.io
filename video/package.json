@@ -1,0 +1,32 @@
+{
+  "name": "shubhams-space-video",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "pnpm render:prepbook && pnpm render:su-design9 && pnpm render:iimsc && pnpm render:rudra-cargo && pnpm render:norxio && pnpm render:praman && pnpm render:seaguard && pnpm render:id-card && pnpm render:run-club && pnpm render:autopharmax && pnpm render:speaker-encoder && pnpm render:irsya",
+    "render:prepbook": "remotion render Prepbook ../public/projects/prepbook/video.mp4",
+    "render:su-design9": "remotion render SuDesign9 ../public/projects/su-design9/video.mp4",
+    "render:iimsc": "remotion render Iimsc ../public/projects/iimsc/video.mp4",
+    "render:rudra-cargo": "remotion render RudraCargo ../public/projects/rudra-cargo/video.mp4",
+    "render:norxio": "remotion render Norxio ../public/projects/norxio/video.mp4",
+    "render:praman": "remotion render Praman ../public/projects/praman/video.mp4",
+    "render:seaguard": "remotion render SeaGuard ../public/projects/seaguard/video.mp4",
+    "render:id-card": "remotion render IdCard ../public/projects/id-card/video.mp4",
+    "render:run-club": "remotion render RunClub ../public/projects/run-club/video.mp4",
+    "render:autopharmax": "remotion render AutoPharmaX ../public/projects/autopharmax/video.mp4",
+    "render:speaker-encoder": "remotion render SpeakerEncoder ../public/projects/speaker-encoder/video.mp4",
+    "render:irsya": "remotion render Irsya ../public/projects/irsya/video.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.541",
+    "@remotion/google-fonts": "4.0.541",
+    "@remotion/transitions": "4.0.541",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.541"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}

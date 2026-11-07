@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect } from "react";
+import { type CSSProperties, useCallback, useEffect } from "react";
 import { useLaptopDocks } from "@/components/laptop/stage";
 import type { Project } from "@/content/projects";
 import { openedFrom } from "./back";
@@ -121,7 +121,7 @@ export function CaseStudyBody({ project, number, next }: { project: Project; num
         <p className="font-label text-xs uppercase tracking-wider text-ink-muted">
           [{pad(number)}] {project.kind} · {project.year}
         </p>
-        <h1 className="mt-3 font-condensed text-6xl leading-[0.9] tracking-[-0.01em] text-blue md:text-[8rem]">
+        <h1 className="mt-3 font-serif text-6xl leading-[0.9] tracking-[-0.02em] text-blue md:text-[8rem]">
           {project.title}
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-ink-muted md:text-xl">{project.summary}</p>
@@ -156,7 +156,50 @@ export function CaseStudyBody({ project, number, next }: { project: Project; num
             <h2 className="font-label text-xs uppercase tracking-wider text-ink-muted md:pt-2">
               {pad(i + 1)} {section.heading}
             </h2>
-            <p className="max-w-[62ch] text-lg leading-relaxed md:text-xl">{section.body}</p>
+            <div className="flex max-w-[62ch] flex-col gap-4">
+              {section.title && (
+                <h3 className="font-serif text-4xl leading-none tracking-[-0.01em] text-ink md:text-5xl">{section.title}</h3>
+              )}
+              {section.body.map((paragraph) => (
+                <p key={paragraph} className="text-lg leading-relaxed md:text-xl">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+            {section.images && (
+              <div
+                className="grid items-start gap-4 md:col-span-2 md:gap-6 md:[grid-template-columns:var(--columns)]"
+                // Each screen gets room in proportion to its width, so a phone sits narrow beside a desktop.
+                style={{ "--columns": section.images.map((image) => `${image.width}fr`).join(" ") } as CSSProperties}
+              >
+                {section.images.map((image) => (
+                  // Already sized webp screens with dimensions set; next/image would add little here.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={image.src}
+                    src={image.src}
+                    alt={image.alt}
+                    width={image.width}
+                    height={image.height}
+                    loading="lazy"
+                    className="h-auto w-full rounded-md border border-line"
+                  />
+                ))}
+              </div>
+            )}
+            {section.video && (
+              <video
+                src={section.video.src}
+                poster={section.video.poster}
+                title={section.video.title}
+                width={section.video.width}
+                height={section.video.height}
+                controls
+                playsInline
+                preload="none"
+                className="h-auto w-full rounded-md border border-line bg-ink md:col-span-2"
+              />
+            )}
           </section>
         ))}
       </div>
@@ -164,7 +207,7 @@ export function CaseStudyBody({ project, number, next }: { project: Project; num
       {next && (
         <Link href={`/projects/${next.id}/`} replace scroll={false} className="group block border-t border-line px-gutter py-12 md:py-14">
           <span className="font-label text-xs uppercase tracking-wider text-ink-muted">Next project</span>
-          <span className="mt-2 block font-condensed text-5xl leading-none text-ink transition-colors group-hover:text-blue md:text-7xl">
+          <span className="mt-2 block font-serif text-5xl leading-none tracking-[-0.02em] text-ink transition-colors group-hover:text-blue md:text-7xl">
             {next.title} →
           </span>
         </Link>

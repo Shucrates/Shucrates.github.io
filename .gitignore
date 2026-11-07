@@ -49,3 +49,7 @@ next-env.d.ts
 
 # editor tooling
 .serena/
+
+# remotion
+/video/node_modules
+/video/out
