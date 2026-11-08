@@ -1,19 +1,26 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { useStage } from "@/components/stage/store";
+import { HomeLink } from "@/components/HomeLink";
+import { useGoHome } from "@/components/HomeLink";
+import { useStage, type Shift } from "@/components/stage/store";
+import { site } from "@/content/site";
 import { IpodScreen, type IpodControls } from "./screen/IpodScreen";
 import { ipodStore } from "./stage";
 import { useClickSound } from "./useClickSound";
 import { useClickWheel } from "./useClickWheel";
 
 const CONTROLS =
-  "iPod. Up and down arrows scroll, Enter selects, Escape or Backspace goes back, Space plays or pauses, left and right arrows skip.";
+  "iPod. Up and down arrows scroll, Enter selects, Escape or Backspace goes back, Space plays or pauses, left and right arrows go back and open (skip in Now Playing).";
+
+const MOBILE = "(max-width: 767px)";
+/** Desktop: smaller than the stage's fit and a little low, so the "my ipod" title shows behind it. */
+const desktopShift = (): Shift => ({ x: 0, y: 0.095 * window.innerHeight, scale: 0.81 });
+const LINK = "pointer-events-auto font-narrow text-[min(2.45vw,3.77dvh)] underline-offset-4";
 
 /** The docked iPod: its screen, and the click wheel wired to it. */
 export function IpodPlayer() {
-  const router = useRouter();
+  const goHome = useGoHome();
   // Where the 3D iPod's screen and wheel are on screen; null until it has landed.
   const layout = useStage(ipodStore, (s) => s.layout);
   const screen = useRef<IpodControls>(null);
@@ -24,15 +31,21 @@ export function IpodPlayer() {
   const controls = useClickWheel(layout?.wheel ?? null, {
     scroll: (by) => screen.current?.scroll(by),
     select: () => screen.current?.select(),
-    press: (button) => {
-      const s = screen.current;
-      if (button === "menu") s?.menu();
-      else if (button === "play") s?.playPause();
-      else s?.skip(button === "next" ? 1 : -1);
-    },
+    press: (button) => screen.current?.button(button),
+    playPause: () => screen.current?.playPause(),
     // Escape goes back, then leaves.
-    escape: () => screen.current?.menu() || router.push("/"),
+    escape: () => screen.current?.menu() || goHome(),
   });
+
+  useEffect(() => {
+    const place = () => ipodStore.set({ shift: matchMedia(MOBILE).matches ? null : desktopShift() });
+    place();
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("resize", place);
+      ipodStore.set({ shift: null });
+    };
+  }, []);
 
   // Keys work as soon as the iPod lands, as they did before it had a focusable region.
   useEffect(() => {
@@ -99,10 +112,26 @@ export function IpodPlayer() {
         type="button"
         aria-pressed={!muted}
         onClick={toggleMuted}
-        className="pointer-events-auto fixed right-gutter top-6 font-label text-sm uppercase tracking-wider text-ink-muted underline-offset-4 hover:underline"
+        className="pointer-events-auto fixed right-gutter top-6 font-label text-sm uppercase tracking-wider text-ink-muted underline-offset-4 hover:underline md:hidden"
       >
         sound: {muted ? "off" : "on"}
       </button>
+
+      {/* Desktop: the same corners as the camera page. */}
+      <div className="fixed bottom-[4.2dvh] left-[3.8vw] flex items-baseline gap-[1.2em] max-md:hidden">
+        <a href={site.spotify} target="_blank" rel="noopener noreferrer" className={`${LINK} underline hover:text-blue`}>
+          follow me on spotify
+        </a>
+        <button
+          type="button"
+          aria-pressed={!muted}
+          onClick={toggleMuted}
+          className={`${LINK} cursor-pointer transition-colors ${muted ? "text-ink-muted hover:text-ink" : "text-blue"}`}
+        >
+          sound : [{muted ? "off" : "on"}]
+        </button>
+      </div>
+      <HomeLink className={`${LINK} fixed bottom-[4.2dvh] right-[7.9vw] hover:text-blue max-md:hidden`}>[go back]</HomeLink>
     </div>
   );
 }

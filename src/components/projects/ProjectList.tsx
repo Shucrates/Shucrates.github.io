@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { HomeLink } from "@/components/HomeLink";
 import { useState } from "react";
 import { useLaptopDocks } from "@/components/laptop/stage";
 import { TAGS, type Project, type Tag } from "@/content/projects";
@@ -23,9 +24,9 @@ export function ProjectList({ projects }: { projects: Project[] }) {
     <section className="px-gutter pb-16 pt-6">
       <h1 className={docks ? "sr-only" : "font-condensed text-6xl leading-none text-blue"}>Projects</h1>
       <div hidden={docks}>
-        <Link href="/" className="mt-3 block w-fit font-label text-xs uppercase tracking-wider underline-offset-4 hover:underline">
+        <HomeLink className="mt-3 block w-fit font-label text-xs uppercase tracking-wider underline-offset-4 hover:underline">
           ← back to the space
-        </Link>
+        </HomeLink>
         <div role="group" aria-label="Filter by tag" className="-mx-gutter mt-6 flex gap-2 overflow-x-auto px-gutter [scrollbar-width:none]">
           {(["All", ...TAGS] as const).map((tag) => (
             <button

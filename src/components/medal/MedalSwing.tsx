@@ -46,7 +46,9 @@ function rig(w: number, h: number) {
   const mobile = w < 768;
   const scale = mobile ? 0.42 * w : Math.min(0.32 * w, 0.5 * h);
   // About 40% of the medal hangs above the page, so the hook and the top of the ribbon are never seen.
-  return { hook: { x: (mobile ? 0.72 : 0.74) * w, y: -0.4 * MEDAL.height * scale }, scale };
+  // On a phone the list scrolls under it, so it hangs from the page and scrolls away with it.
+  const y = -0.4 * MEDAL.height * scale - (mobile ? window.scrollY : 0);
+  return { hook: { x: (mobile ? 0.72 : 0.74) * w, y }, scale };
 }
 
 export function MedalSwing() {

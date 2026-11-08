@@ -86,3 +86,16 @@ html[data-backdrop-still] :is(main, canvas[data-stage]) {
     filter: opacity(0);
   }
 }
+
+/* Posters waiting to load: a soft light sweeping across the tile. */
+.poster-shimmer {
+  background: linear-gradient(100deg, #ece9e2 30%, #f7f5f0 50%, #ece9e2 70%) 0 0 / 220% 100%;
+  animation: poster-shimmer 1.3s ease-in-out infinite;
+}
+@keyframes poster-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .poster-shimmer { animation: none; }
+}

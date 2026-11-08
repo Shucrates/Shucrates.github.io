@@ -21,6 +21,10 @@ export type PlayerState = {
   hud: boolean;
   /** Bumped to restart the current episode. */
   restart: number;
+  /** Where to jump to (0–1 of the episode), and a counter so the same spot twice still fires. */
+  seek: { to: number; n: number };
+  /** Episode picked in the grid, shown as chosen for a moment before it opens. */
+  opening: number | null;
 };
 
 const MUTED_KEY = "camera-muted";
@@ -33,6 +37,8 @@ const initial: PlayerState = {
   muted: true,
   hud: true,
   restart: 0,
+  seek: { to: 0, n: 0 },
+  opening: null,
 };
 
 let state = initial;
@@ -56,7 +62,10 @@ export const player = {
     set({ ...initial, muted });
   },
   /** Opens the episode view at episode `index`. */
-  open: (index: number) => set({ view: "episodes", index, cursor: index, menu: false, playing: true }),
+  open: (index: number) => set({ view: "episodes", index, cursor: index, menu: false, playing: true, opening: null }),
+  setOpening: (opening: number | null) => set({ opening }),
+  /** Jumps to `to` (0–1) through the episode, e.g. dragging the progress bar. */
+  seekTo: (to: number) => set({ seek: { to: Math.max(0, Math.min(1, to)), n: state.seek.n + 1 } }),
   /** Back to the title screen. */
   close: () => set({ view: "title", menu: false }),
   /** Back to the title screen with the episode grid open. */

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { switchOffScreen } from "@/components/laptop/model";
 import { laptopStore, useLaptopDocks } from "@/components/laptop/stage";
 import { Credit } from "@/components/Credit";
+import { useGoHome } from "@/components/HomeLink";
 import { site } from "@/content/site";
 import { useStage } from "@/components/stage/store";
 import { openedFrom } from "@/components/projects/back";
@@ -32,6 +33,7 @@ const BLANK = {
  */
 export function MacScreen({ projects }: { projects: Project[] }) {
   const router = useRouter();
+  const goHome = useGoHome();
   const caseStudy = usePathname().match(/^\/projects\/([^/]+)/)?.[1] ?? null;
   // Where the 3D laptop's display is on screen; null until it has landed.
   const layout = useStage(laptopStore, (s) => s.layout);
@@ -111,7 +113,7 @@ export function MacScreen({ projects }: { projects: Project[] }) {
                     onAnimationComplete={() => {
                       // The 3D laptop's own display stays dark as the lid closes.
                       switchOffScreen();
-                      router.push("/");
+                      goHome();
                     }}
                   />
                 )}

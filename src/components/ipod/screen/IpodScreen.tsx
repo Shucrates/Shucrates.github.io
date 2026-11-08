@@ -14,6 +14,7 @@ import { MenuList } from "./MenuList";
 import { NowPlaying } from "./NowPlaying";
 import { TitleBar } from "./TitleBar";
 import { screenFont } from "./font";
+import { useBackSteps } from "@/components/useBackSteps";
 
 /** What the click wheel can tell the screen to do. */
 export type IpodControls = {
@@ -23,6 +24,8 @@ export type IpodControls = {
   menu: () => boolean;
   playPause: () => void;
   skip: (by: 1 | -1) => void;
+  /** A press on the wheel's top, bottom, left or right edge. */
+  button: (edge: "menu" | "play" | "prev" | "next") => void;
 };
 
 type Nav = { stack: Frame[]; direction: 1 | -1 };
@@ -83,12 +86,48 @@ export function IpodScreen({ ref, width, height }: Props) {
     }
   };
 
+  /** On Now Playing, tapping the screen only retries a failed load; Spotify opens from its link alone. */
+  const retryable = view.kind === "now-playing" && !queued && music.nowPlaying.status === "error";
+
+  /** The centre button plays and pauses: on the song that's already loaded it toggles instead of starting it over. */
   const select = () => {
-    if (view.kind !== "now-playing") return act(rows[top.cursor]?.action ?? null);
-    if (!queued && music.nowPlaying.status === "error") return retry("nowPlaying");
-    const track = queued ?? live?.track;
-    if (track) window.open(track.spotifyUrl, "_blank", "noopener");
+    const action = view.kind === "now-playing" ? null : (rows[top.cursor]?.action ?? null);
+    if (action?.type === "play" && action.queue[action.index]?.id === queued?.id) {
+      player.toggle();
+      return push({ kind: "now-playing" });
+    }
+    if (view.kind !== "now-playing") return act(action);
+    controls.playPause();
   };
+
+  // Playing through Cover Flow, the covers follow the song: the next album turns to face you, flipped to its list.
+  const playingId = queued?.id;
+  const [followed, setFollowed] = useState(playingId);
+  if (playingId !== followed) {
+    setFollowed(playingId);
+    if (playingId)
+      setNav((n) => {
+        const stack = n.stack;
+        const last = stack[stack.length - 1];
+        const flowAt = last.view.kind === "cover-flow" ? stack.length - 1 : last.view.kind === "album" && stack[stack.length - 2]?.view.kind === "cover-flow" ? stack.length - 2 : -1;
+        if (flowAt < 0) return n;
+        const albums = albumsOf(music);
+        const albumIndex = albums.findIndex((album) => album.tracks.some((track) => track.id === playingId));
+        if (albumIndex < 0) return n;
+        const album = albums[albumIndex];
+        const songIndex = album.tracks.findIndex((track) => track.id === playingId);
+        const flowFrame = moveTo(stack[flowAt], albumIndex, albums.length);
+        if (last.view.kind !== "album") return { ...n, stack: [...stack.slice(0, flowAt), flowFrame] };
+        const same = last.view.album.key === album.key;
+        const albumFrame = moveTo(same ? last : frame({ kind: "album", album }), songIndex, album.tracks.length);
+        return { ...n, stack: [...stack.slice(0, flowAt), flowFrame, albumFrame] };
+      });
+  }
+
+  // The browser's back button goes up one screen at a time, then leaves the iPod.
+  useBackSteps("ipod", nav.stack.length - 1, (to) =>
+    setNav((n) => (n.stack.length <= to + 1 ? n : { stack: n.stack.slice(0, to + 1), direction: -1 })),
+  );
 
   const controls: IpodControls = {
     scroll: (by) => moveCursor((cursor) => cursor + by),
@@ -99,6 +138,9 @@ export function IpodScreen({ ref, width, height }: Props) {
       return true;
     },
     playPause: () => {
+      // In a list, ▶❙❙ plays the highlighted song.
+      const row = rows[top.cursor]?.action;
+      if (view.kind !== "now-playing" && row?.type === "play") return act(row);
       if (queued) player.toggle();
       // The live Spotify track never plays by itself; ▶ plays its preview.
       else if (view.kind === "now-playing" && live) player.play([live.track], 0);
@@ -107,13 +149,30 @@ export function IpodScreen({ ref, width, height }: Props) {
       if (view.kind === "now-playing") player.skip(by);
       else moveCursor((_, count) => (by > 0 ? count - 1 : 0));
     },
+    // On the home screen MENU and ▶❙❙ move up and down, as there's nowhere to go back to.
+    // Elsewhere MENU goes back. In Now Playing ▶❙❙, ⏮ and ⏭ do the usual; in Cover Flow ⏮/⏭ turn to the
+    // albums either side; in lists ▶❙❙ plays the highlighted song and ⏮/⏭ go back and open.
+    button: (edge) => {
+      if (view.kind === "root" && (edge === "menu" || edge === "play")) controls.scroll(edge === "menu" ? -1 : 1);
+      else if (edge === "menu") controls.menu();
+      else if (view.kind === "now-playing") {
+        if (edge === "play") controls.playPause();
+        else player.skip(edge === "next" ? 1 : -1);
+      } else if (view.kind === "cover-flow") {
+        if (edge === "play") select();
+        else controls.scroll(edge === "next" ? 1 : -1);
+      } else if (edge === "play") controls.playPause();
+      else if (edge === "prev") controls.menu();
+      else select();
+    },
   };
   useImperativeHandle(ref, () => controls);
 
+  // Clicking a row opens or plays it straight away.
   const pick = (index: number) => {
     tick();
-    if (index === top.cursor) select();
-    else moveCursor(() => index);
+    moveCursor(() => index);
+    act(rows[index]?.action ?? null);
   };
 
   const list = { label: titleOf(view), rows, cursor: top.cursor, first: top.first, ...listLayout(view), onPick: pick };
@@ -185,7 +244,8 @@ export function IpodScreen({ ref, width, height }: Props) {
   return (
     <MotionConfig reducedMotion="user">
       <div
-        className={`${screenFont.className} relative origin-top-left overflow-hidden bg-white text-[#111] select-none`}
+        onClick={retryable ? () => retry("nowPlaying") : undefined}
+        className={`${screenFont.className} relative origin-top-left overflow-hidden bg-white text-[#111] select-none ${retryable ? "cursor-pointer" : ""}`}
         style={{ ...SCREEN, transform: `scale(${width / SCREEN.width}, ${height / SCREEN.height})` }}
       >
         <TitleBar

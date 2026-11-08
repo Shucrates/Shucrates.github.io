@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type CSSProperties, useCallback, useEffect } from "react";
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useLaptopDocks } from "@/components/laptop/stage";
 import type { Project } from "@/content/projects";
 import { openedFrom } from "./back";
@@ -150,40 +150,99 @@ export function CaseStudyBody({ project, number, next }: { project: Project; num
         )}
       </dl>
 
-      <div className="flex flex-col gap-14 px-gutter py-16 md:gap-20 md:py-20">
-        {caseStudy.sections.map((section, i) => (
-          <section key={section.heading} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:gap-10">
-            <h2 className="font-label text-xs uppercase tracking-wider text-ink-muted md:pt-2">
+      <Sections project={project} />
+
+      {next && (
+        <Link href={`/projects/${next.id}/`} replace scroll={false} className="group block border-t border-line px-gutter py-12 md:py-14">
+          <span className="font-label text-xs uppercase tracking-wider text-ink-muted">Next project</span>
+          <span className="mt-2 block font-serif text-5xl leading-none tracking-[-0.02em] text-ink transition-colors group-hover:text-blue md:text-7xl">
+            {next.title} →
+          </span>
+        </Link>
+      )}
+    </>
+  );
+}
+
+type Section = Project["caseStudy"]["sections"][number];
+type Image = NonNullable<Section["images"]>[number];
+
+const slug = (project: Project, i: number) => `${project.id}-section-${i + 1}`;
+
+/**
+ * The case study's sections, with a contents column down the left on wide screens that
+ * follows the reading position and jumps to a section when clicked.
+ */
+function Sections({ project }: { project: Project }) {
+  const { sections } = project.caseStudy;
+  const [active, setActive] = useState(0);
+  const list = useRef<HTMLDivElement>(null);
+
+  // The section crossing the upper third of the view is the one being read.
+  useEffect(() => {
+    const elements = [...(list.current?.querySelectorAll<HTMLElement>("[data-section]") ?? [])];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) if (entry.isIntersecting) setActive(Number((entry.target as HTMLElement).dataset.section));
+      },
+      { rootMargin: "-25% 0px -65% 0px" },
+    );
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [project.id]);
+
+  const jump = (i: number) => document.getElementById(slug(project, i))?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  return (
+    <div className="px-gutter py-16 md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-12 md:py-20 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <nav aria-label="Sections" className="sticky top-20 hidden self-start md:block">
+        <ol className="flex flex-col border-l border-line">
+          {sections.map((section, i) => (
+            <li key={section.heading}>
+              <button
+                type="button"
+                onClick={() => jump(i)}
+                aria-current={active === i ? "location" : undefined}
+                className={`-ml-px flex w-full gap-2 border-l-2 py-[6px] pl-4 text-left font-label text-xs uppercase tracking-wider transition-colors ${
+                  active === i ? "border-blue text-ink" : "border-transparent text-ink-muted hover:text-ink"
+                }`}
+              >
+                <span className="tabular-nums">{pad(i + 1)}</span>
+                {section.heading}
+              </button>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <div ref={list} className="flex min-w-0 flex-col gap-16 md:gap-24">
+        {sections.map((section, i) => (
+          <section key={section.heading} id={slug(project, i)} data-section={i} className="flex scroll-mt-20 flex-col gap-5">
+            <h2 className="font-label text-xs uppercase tracking-wider text-ink-muted">
               {pad(i + 1)} {section.heading}
             </h2>
-            <div className="flex max-w-[62ch] flex-col gap-4">
-              {section.title && (
-                <h3 className="font-serif text-4xl leading-none tracking-[-0.01em] text-ink md:text-5xl">{section.title}</h3>
-              )}
-              {section.body.map((paragraph) => (
-                <p key={paragraph} className="text-lg leading-relaxed md:text-xl">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
+            {section.title && (
+              <h3 className="max-w-[24ch] font-display text-3xl font-medium leading-[1.05] tracking-[-0.03em] text-ink md:text-[2.6rem]">
+                {section.title}
+              </h3>
+            )}
+            {section.body.length > 0 && (
+              <div className="flex max-w-[64ch] flex-col gap-4">
+                {section.body.map((paragraph) => (
+                  <p key={paragraph} className="text-lg leading-relaxed md:text-xl">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            )}
             {section.images && (
               <div
-                className="grid items-start gap-4 md:col-span-2 md:gap-6 md:[grid-template-columns:var(--columns)]"
+                className="mt-2 grid items-start gap-4 md:gap-6 md:[grid-template-columns:var(--columns)]"
                 // Each screen gets room in proportion to its width, so a phone sits narrow beside a desktop.
-                style={{ "--columns": section.images.map((image) => `${image.width}fr`).join(" ") } as CSSProperties}
+                style={{ "--columns": section.images.map((image) => `${Math.min(image.width, 1440)}fr`).join(" ") } as CSSProperties}
               >
                 {section.images.map((image) => (
-                  // Already sized webp screens with dimensions set; next/image would add little here.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={image.src}
-                    src={image.src}
-                    alt={image.alt}
-                    width={image.width}
-                    height={image.height}
-                    loading="lazy"
-                    className="h-auto w-full rounded-md border border-line"
-                  />
+                  <Figure key={image.src} image={image} />
                 ))}
               </div>
             )}
@@ -197,21 +256,58 @@ export function CaseStudyBody({ project, number, next }: { project: Project; num
                 controls
                 playsInline
                 preload="none"
-                className="h-auto w-full rounded-md border border-line bg-ink md:col-span-2"
+                className="mt-2 h-auto w-full rounded-md border border-line bg-ink"
               />
             )}
           </section>
         ))}
       </div>
+    </div>
+  );
+}
 
-      {next && (
-        <Link href={`/projects/${next.id}/`} replace scroll={false} className="group block border-t border-line px-gutter py-12 md:py-14">
-          <span className="font-label text-xs uppercase tracking-wider text-ink-muted">Next project</span>
-          <span className="mt-2 block font-serif text-5xl leading-none tracking-[-0.02em] text-ink transition-colors group-hover:text-blue md:text-7xl">
-            {next.title} →
-          </span>
-        </Link>
-      )}
-    </>
+/** Phones are shown a screen tall, desktops a little wider than tall; longer pages scroll inside the frame on hover. */
+const PHONE_SCREEN = 2.2;
+const DESKTOP_SCREEN = 0.8;
+
+/**
+ * One screenshot or board. Never drawn wider than it was captured, so small exports stay
+ * sharp; full-length pages sit in a frame that pans down them on hover, with a link to the whole thing.
+ */
+function Figure({ image }: { image: Image }) {
+  const phone = image.width < 700;
+  const frame = image.width * (phone ? PHONE_SCREEN : DESKTOP_SCREEN);
+  const long = image.height > frame * 1.15;
+  // Big boards are drawn up to their width; a 1× export is never stretched past it.
+  const style = { maxWidth: image.width };
+  const img = (
+    // Already sized webp screens with dimensions set; next/image would add little here.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={image.src}
+      alt={image.alt}
+      width={image.width}
+      height={image.height}
+      loading="lazy"
+      className={long ? "absolute inset-x-0 top-0 h-auto w-full transition-transform ease-in-out group-hover:[transform:translateY(var(--pan))]" : "h-auto w-full rounded-md border border-line"}
+      style={long ? ({ transitionDuration: `${Math.round((image.height / frame) * 1.6)}s` } as CSSProperties) : undefined}
+    />
+  );
+  if (!long) return <div className="mx-auto w-full" style={style}>{img}</div>;
+  return (
+    <figure className="group relative mx-auto w-full" style={style}>
+      <div
+        className="relative w-full overflow-hidden rounded-md border border-line bg-white"
+        style={{ aspectRatio: `${image.width} / ${frame}`, "--pan": `-${(1 - frame / image.height) * 100}%` } as CSSProperties}
+      >
+        {img}
+      </div>
+      <figcaption className="mt-2 flex justify-between gap-4 font-label text-[11px] uppercase tracking-wider text-ink-muted">
+        <span>hover to scroll</span>
+        <a href={image.src} target="_blank" rel="noopener noreferrer" className="hover:text-blue">
+          full page ↗
+        </a>
+      </figcaption>
+    </figure>
   );
 }

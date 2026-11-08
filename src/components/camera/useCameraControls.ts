@@ -1,13 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useGoHome } from "@/components/HomeLink";
 import { episodes } from "@/content/episodes";
 import type { CameraButton } from "./geometry";
 import { player } from "./player-store";
 
 /** The episode grid is 3 across. */
 export const GRID_COLUMNS = 3;
+/** A beat between picking an episode and opening it, so the choice registers. */
+const OPEN_DELAY = 380;
+/** Pixels of mouse wheel or trackpad scroll per step through the menu. */
+const STEP_PIXELS = 60;
+/** After a step, the wheel waits this long (ms) so one trackpad flick moves one episode. */
+const WHEEL_COOLDOWN = 260;
 
 /** Episode view: moves to episode `index` (clamped to the first and last). */
 export function goToEpisode(index: number) {
@@ -16,7 +22,12 @@ export function goToEpisode(index: number) {
 
 /** Opens episode `index`: the episode view from the title screen, or moves to it in the episode view. */
 export function openEpisode(index: number) {
-  if (player.get().view === "title") player.open(index);
+  if (player.get().view === "title") {
+    if (player.get().opening !== null) return;
+    player.setCursor(index);
+    player.setOpening(index);
+    window.setTimeout(() => player.open(index), OPEN_DELAY);
+  }
   else {
     player.closeMenu();
     goToEpisode(index);
@@ -76,7 +87,7 @@ export function press(button: CameraButton) {
  * Also pauses when the tab is hidden.
  */
 export function useCameraControls() {
-  const router = useRouter();
+  const goHome = useGoHome();
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -94,7 +105,7 @@ export function useCameraControls() {
         r: "record",
       };
       if (event.key === "Escape") {
-        back(() => router.push("/"));
+        back(goHome);
         return;
       }
       if (event.key === "m" || event.key === "M") {
@@ -108,14 +119,28 @@ export function useCameraControls() {
       event.preventDefault();
       press(button);
     };
+    // The scroll wheel moves through the menu wherever the pointer is.
+    let scrolled = 0;
+    let lastStep = 0;
+    const onWheel = (event: WheelEvent) => {
+      if (!player.get().menu) return;
+      event.preventDefault();
+      scrolled += event.deltaMode === 1 ? event.deltaY * STEP_PIXELS : event.deltaY;
+      if (Math.abs(scrolled) < STEP_PIXELS || event.timeStamp - lastStep < WHEEL_COOLDOWN) return;
+      player.step(scrolled > 0 ? 1 : -1);
+      scrolled = 0;
+      lastStep = event.timeStamp;
+    };
     const onVisibility = () => {
       if (document.hidden) player.setPlaying(false);
     };
     window.addEventListener("keydown", onKey);
+    window.addEventListener("wheel", onWheel, { passive: false });
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("wheel", onWheel);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [router]);
+  }, [goHome]);
 }

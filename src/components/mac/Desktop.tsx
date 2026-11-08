@@ -121,7 +121,8 @@ export function Desktop({ projects, size, off, resumed, caseStudy, onOpenProject
 
   const open = (app: App, title: string, id: string = app) => {
     if (windows.some((w) => w.id === id)) return raise(id);
-    setWindows((ws) => [...ws, { id, app, title, rect: OPEN_AT[app], z: above(ws), minimised: false, zoomed: false }]);
+    // Finder always opens filling the screen; only minimising makes it small.
+    setWindows((ws) => [...ws, { id, app, title, rect: OPEN_AT[app], z: above(ws), minimised: false, zoomed: app === "finder" }]);
     if (app in DOCK_APPS) setBounces((b) => ({ ...b, [app]: (b[app] ?? 0) + 1 }));
   };
 
@@ -371,10 +372,19 @@ function CaseStudyWindow({ project, projects, bounds, menuOpen }: CaseStudyWindo
     if (menuOpen) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") back();
+      // ← / → move to the projects either side, unless typing or using a control.
+      if (event.metaKey || event.ctrlKey || event.altKey || (event.target as HTMLElement).closest("input, textarea, video")) return;
+      if (event.key === "ArrowLeft" && previous) {
+        event.preventDefault();
+        go(previous);
+      } else if (event.key === "ArrowRight" && next) {
+        event.preventDefault();
+        go(next);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [back, menuOpen]);
+  });
 
   return (
     <Window
@@ -390,9 +400,18 @@ function CaseStudyWindow({ project, projects, bounds, menuOpen }: CaseStudyWindo
           onBack={previous ? () => go(previous) : undefined}
           onForward={next ? () => go(next) : undefined}
           trailing={
-            <p className="font-mono text-[12px] tabular-nums text-black/50">
-              {pad(at + 1)} / {pad(projects.length)}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="font-mono text-[12px] tabular-nums text-black/50">
+                {pad(at + 1)} / {pad(projects.length)} <span className="text-black/30">· ← →</span>
+              </p>
+              <button
+                type="button"
+                onClick={back}
+                className="flex h-[30px] items-center gap-2 rounded-full bg-[#1d1d1f] px-4 text-[13px] font-medium text-white hover:bg-black"
+              >
+                ✕ Close <kbd className="font-sans text-white/50">esc</kbd>
+              </button>
+            </div>
           }
         />
       }

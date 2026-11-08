@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { HomeLink } from "@/components/HomeLink";
 import { animate, useReducedMotion, type AnimationPlaybackControls } from "framer-motion";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useStage, type Box, type Shift } from "@/components/stage/store";
+import { useBackSteps } from "@/components/useBackSteps";
 import { episodes, show } from "@/content/episodes";
 import { fileNumber } from "./format";
 import { LcdMenu } from "./LcdMenu";
@@ -17,9 +18,10 @@ import { openEpisode, press, useCameraControls } from "./useCameraControls";
 const MOBILE = "(max-width: 767px)";
 const FLY = { duration: 0.7, ease: [0.65, 0, 0.3, 1] } as const;
 const HOVER = { duration: 0.35, ease: [0.22, 1, 0.36, 1] } as const;
-/** Hovered in the corner: it grows by this much and turns a little towards the page. */
-const HOVER_GROW = 1.2;
-const SWIVEL = { spin: -0.42, tilt: 0.14 };
+/** Hovered in the corner: it grows by this much, straight on, so its controls are easy to hit. */
+const HOVER_GROW = 1.3;
+/** Room above the camera for its label, inside the hover area so moving onto it keeps the controls up. */
+const LABEL_SPACE = 52;
 const NO_SHIFT: Shift = { x: 0, y: 0, scale: 1 };
 /** Title screen, from the mockup: a touch left of centre. */
 const titleShift = (): Shift => ({ x: -0.0125 * window.innerWidth, y: 0, scale: 0.99 });
@@ -95,6 +97,53 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
 
 const at = ({ left, top, width, height }: Box) => ({ left, top, width, height });
 
+const union = (a: Box, b: Box): Box => {
+  const left = Math.min(a.left, b.left);
+  const top = Math.min(a.top, b.top);
+  return { left, top, width: Math.max(a.left + a.width, b.left + b.width) - left, height: Math.max(a.top + a.height, b.top + b.height) - top };
+};
+
+/**
+ * The camera in the corner while an episode plays. Hovering grows it with
+ * "[back to the episodes]" above it, and play/pause, sound and a draggable
+ * progress bar on its screen (see <LcdPlayback>). Clicking the camera goes back to the episodes.
+ */
+function SmallCamera({ body, area, hovered, onEnter, onLeave }: {
+  body: Box;
+  area: Box;
+  hovered: boolean;
+  onEnter: () => void;
+  onLeave: (event: React.PointerEvent | React.FocusEvent) => void;
+}) {
+  return (
+    <div
+      data-small-camera
+      className="pointer-events-auto absolute"
+      style={{ left: area.left, top: area.top - LABEL_SPACE, width: area.width, height: area.height + LABEL_SPACE }}
+      onPointerEnter={onEnter}
+      onPointerLeave={onLeave}
+      onFocus={onEnter}
+      onBlur={onLeave}
+    >
+      <p
+        aria-hidden
+        className={`pointer-events-none absolute inset-x-0 -translate-y-full whitespace-nowrap pb-1 text-center font-narrow text-lg leading-none transition-opacity duration-200 md:text-3xl ${hovered ? "opacity-100" : "opacity-0"}`}
+        style={{ left: body.left - area.left - body.width * 0.07, width: body.width, top: body.top - area.top + LABEL_SPACE }}
+      >
+        {/* Backed with the page colour, as on a phone it can sit against the story's last line. */}
+        <span className="bg-bg px-1">[back to the episodes]</span>
+      </p>
+      <button
+        type="button"
+        aria-label="Back to the episodes"
+        onClick={player.pick}
+        className="absolute cursor-pointer rounded-soft"
+        style={{ left: body.left - area.left, top: body.top - area.top + LABEL_SPACE, width: body.width, height: body.height }}
+      />
+    </div>
+  );
+}
+
 /**
  * Turns the docked camera into the episode player for /shuisbored. On the title
  * screen it sits in the middle playing the episodes; opening one flies it into
@@ -104,7 +153,7 @@ const at = ({ left, top, width, height }: Box) => ({ left, top, width, height })
 export function CameraPlayer() {
   // Where the 3D camera's LCD and buttons are on screen; null until it has landed.
   const screen = useStage(cameraStore, (s) => s.layout);
-  const { view, index, menu, cursor, playing, muted, hud, restart } = usePlayer((s) => s);
+  const { view, index, menu, cursor, playing, muted, hud, restart, seek, opening } = usePlayer((s) => s);
   const mobile = useMobile();
   const reducedMotion = useReducedMotion();
   const base = useRef<{ box: Box; size: string } | null>(null);
@@ -166,24 +215,21 @@ export function CameraPlayer() {
     };
   }, [small, hover, mobile, reducedMotion]);
 
-  // Swivel on hover, so the small camera reads as an object rather than a flat picture.
-  useEffect(() => {
-    if (reducedMotion) return;
-    const { spin, tilt } = cameraStore.get();
-    const options = { type: "spring", stiffness: 140, damping: 16 } as const;
-    const animations = [
-      animate(spin, hover ? SWIVEL.spin : 0, { ...options, onUpdate: (v) => cameraStore.set({ spin: v }) }),
-      animate(tilt, hover ? SWIVEL.tilt : 0, { ...options, onUpdate: (v) => cameraStore.set({ tilt: v }) }),
-    ];
-    return () => animations.forEach((animation) => animation.stop());
-  }, [hover, reducedMotion]);
+  // The browser's back button leaves an episode for the grid on the title screen.
+  useBackSteps("camera", view === "episodes" ? 1 : 0, player.pick);
 
   const episode = episodes[index];
   const announcement = menu
     ? episodes[cursor] && `${fileNumber(cursor)}, ${episodes[cursor].title}. Enter to open.`
     : episode && `${episode.label}: ${episode.title}, ${playing ? "playing" : "paused"}`;
   const body = screen && bodyBox(screen);
-  const cornerBox = body && small && !hover ? body : hoverBox;
+  // The corner camera and its screen (drawn over it) count as one hover area.
+  const enter = () => !flying.current && body && setHoverBox((box) => box ?? body);
+  const leave = (event: React.PointerEvent | React.FocusEvent) => {
+    const to = event.relatedTarget;
+    if (to instanceof Element && to.closest("[data-lcd], [data-small-camera]")) return;
+    setHoverBox(null);
+  };
 
   return (
     <>
@@ -196,6 +242,7 @@ export function CameraPlayer() {
         <a href={show.instagram} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-blue">
           instagram
         </a>
+        {view === "title" && (
         <button
           type="button"
           onClick={player.toggleMute}
@@ -206,11 +253,12 @@ export function CameraPlayer() {
           <SpeakerIcon muted={muted} />
           sound : [{muted ? "off" : "on"}]
         </button>
+        )}
       </div>
       {view === "title" ? (
-        <Link href="/" className={`${LINK} fixed bottom-[4.2dvh] right-gutter z-50 hover:text-blue md:right-[7.9vw]`}>
+        <HomeLink className={`${LINK} fixed bottom-[4.2dvh] right-gutter z-50 hover:text-blue md:right-[7.9vw]`}>
           [go back]
-        </Link>
+        </HomeLink>
       ) : (
         <button
           type="button"
@@ -227,14 +275,18 @@ export function CameraPlayer() {
             <div
               tabIndex={0}
               role="group"
-              aria-label="Camera. Left and right arrows browse, Enter opens or pauses, M mutes, Escape goes back."
+              aria-label="Camera. Up and down arrows or the scroll wheel browse, Enter opens or pauses, M mutes, Escape goes back."
               className="absolute rounded-soft focus-visible:outline-offset-8"
               style={at(body)}
             />
           )}
 
           <div
-            className="pointer-events-auto absolute top-0 left-0 origin-top-left overflow-hidden bg-black [container-type:inline-size]"
+            data-lcd
+            onPointerEnter={small ? enter : undefined}
+            onPointerLeave={small ? leave : undefined}
+            onClick={small ? () => (setHoverBox(null), player.pick()) : undefined}
+            className={`pointer-events-auto absolute top-0 left-0 z-10 origin-top-left overflow-hidden bg-black [container-type:inline-size] ${small ? "cursor-pointer" : ""}`}
             style={{ width: screen.lcd.width, height: screen.lcd.height, transform: quadTransform(screen.lcd.width, screen.lcd.height, screen.lcdCorners) }}
           >
             <LcdPlayback
@@ -244,7 +296,9 @@ export function CameraPlayer() {
               muted={muted}
               hud={hud}
               restart={restart}
+              seek={seek}
               compact={small}
+              controls={small && (hover || mobile)}
             />
             {!small && !menu && (
               // The picture itself: opens the episode from the title screen, pauses once it's open.
@@ -255,25 +309,11 @@ export function CameraPlayer() {
                 className="absolute inset-x-0 top-[18%] bottom-[20%] cursor-pointer"
               />
             )}
-            {menu && <LcdMenu episodes={episodes} cursor={cursor} onPick={openEpisode} />}
+            {menu && <LcdMenu episodes={episodes} cursor={cursor} opening={opening} onPick={openEpisode} />}
           </div>
 
           {small ? (
-            <button
-              type="button"
-              aria-label="Back to the episodes"
-              onClick={() => {
-                setHoverBox(null);
-                player.pick();
-              }}
-              // Only once it has landed in the corner, not while it flies past the pointer.
-              onPointerEnter={() => !flying.current && setHoverBox(body)}
-              onPointerLeave={() => setHoverBox(null)}
-              onFocus={() => !flying.current && setHoverBox(body)}
-              onBlur={() => setHoverBox(null)}
-              className="pointer-events-auto absolute cursor-pointer rounded-soft"
-              style={at(cornerBox ?? body)}
-            />
+            <SmallCamera body={body} area={hover && hoverBox ? union(hoverBox, body) : body} hovered={hover || mobile} onEnter={enter} onLeave={leave} />
           ) : (
             screen.buttons.map(({ id, label, box }) => (
               <button

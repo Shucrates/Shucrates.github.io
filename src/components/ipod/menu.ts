@@ -169,9 +169,18 @@ export function rowsOf(view: View, music: Music): Row[] {
       const loading = Object.values(music).some((l) => l.status === "loading");
       return loading ? [] : [{ key: "empty", label: "No albums yet", action: null }];
     }
-    case "album":
+    case "album": {
+      // Songs play on through the rest of Cover Flow, album after album, without leaving it.
+      const albums = albumsOf(music);
+      const queue = albums.flatMap((album) => album.tracks);
+      const offset = queue.findIndex((track) => track.id === view.album.tracks[0]?.id);
       // The artist is already on the card, so rows are just the song titles.
-      return songRows(view.album.tracks).map((row) => ({ ...row, detail: undefined }));
+      return view.album.tracks.map((track, index) => ({
+        key: track.id,
+        label: track.title,
+        action: offset < 0 ? { type: "play", queue: view.album.tracks, index } : { type: "play", queue, index: offset + index },
+      }));
+    }
     case "now-playing":
     case "about":
       return [];

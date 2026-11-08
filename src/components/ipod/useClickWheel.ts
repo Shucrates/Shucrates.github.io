@@ -15,6 +15,8 @@ export type WheelHandlers = {
   scroll: (by: 1 | -1) => void;
   select: () => void;
   press: (button: WheelButton) => void;
+  /** Space: play or pause wherever you are. */
+  playPause: () => void;
   /** Esc; defaults to MENU. */
   escape?: () => void;
 };
@@ -92,7 +94,7 @@ export function useClickWheel(centre: { x: number; y: number } | null, handlers:
         ArrowLeft: () => press("prev"),
         ArrowRight: () => press("next"),
         Enter: select,
-        " ": () => press("play"),
+        " ": () => (tick(), handlers.playPause()),
         Backspace: () => press("menu"),
         Escape: () => (handlers.escape ? (tick(), handlers.escape()) : press("menu")),
       };

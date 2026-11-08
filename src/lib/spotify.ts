@@ -61,16 +61,38 @@ async function accessToken(): Promise<string> {
   return token.value;
 }
 
-/** GET a Web API path; `null` for 204 No Content (e.g. nothing playing). */
-async function api<T>(path: string): Promise<T | null> {
-  const res = await fetch(`https://api.spotify.com/v1${path}`, {
-    headers: { Authorization: `Bearer ${await accessToken()}` },
-    cache: "no-store",
-  });
-  if (res.status === 204) return null;
-  if (!res.ok) throw new Error(`Spotify ${path} failed: ${res.status}`);
-  const text = await res.text();
-  return text ? (JSON.parse(text) as T) : null;
+/**
+ * Spotify answers kept in memory for a while, so reloads don't spend the app's rate limit.
+ * Kept on globalThis so they survive dev-server reloads of this module.
+ */
+const memory = globalThis as { spotifyAnswers?: Map<string, { value: unknown; until: number }>; spotifyPausedUntil?: number };
+const answers = (memory.spotifyAnswers ??= new Map());
+
+/** GET a Web API path, remembered for `seconds`; `null` for 204 No Content (e.g. nothing playing). */
+async function api<T>(path: string, seconds: number): Promise<T | null> {
+  const kept = answers.get(path);
+  if (kept && Date.now() < kept.until) return kept.value as T | null;
+  try {
+    // After a 429, wait out Spotify's Retry-After before asking again.
+    if (Date.now() < (memory.spotifyPausedUntil ?? 0)) throw new Error(`Spotify rate limited, skipping ${path}`);
+    const res = await fetch(`https://api.spotify.com/v1${path}`, {
+      headers: { Authorization: `Bearer ${await accessToken()}` },
+      cache: "no-store",
+    });
+    if (res.status === 429) {
+      memory.spotifyPausedUntil = Date.now() + Number(res.headers.get("Retry-After") || 60) * 1000;
+      throw new Error(`Spotify ${path} rate limited`);
+    }
+    if (!res.ok && res.status !== 204) throw new Error(`Spotify ${path} failed: ${res.status}`);
+    const text = res.status === 204 ? "" : await res.text();
+    const value = text ? (JSON.parse(text) as T) : null;
+    answers.set(path, { value, until: Date.now() + seconds * 1000 });
+    return value;
+  } catch (error) {
+    // An old answer beats an error.
+    if (kept) return kept.value as T | null;
+    throw error;
+  }
 }
 
 /** Spotify lists images largest first. */
@@ -92,7 +114,7 @@ function toTrack(track: SpotifyTrack): Track {
 /** What I'm playing now, or else the last thing I played; `null` if Spotify has neither. */
 export async function getNowPlaying(): Promise<NowPlaying | null> {
   const fetchedAt = Date.now();
-  const current = await api<CurrentlyPlaying>("/me/player/currently-playing");
+  const current = await api<CurrentlyPlaying>("/me/player/currently-playing", 30);
   // Podcasts and ads come back without a track; treat them as nothing playing.
   if (current?.item && current.currently_playing_type === "track") {
     return {
@@ -103,19 +125,19 @@ export async function getNowPlaying(): Promise<NowPlaying | null> {
       fetchedAt,
     };
   }
-  const recent = await api<RecentlyPlayed>("/me/player/recently-played?limit=1");
+  const recent = await api<RecentlyPlayed>("/me/player/recently-played?limit=1", 120);
   const last = recent?.items[0];
   if (!last) return null;
   return { track: toTrack(last.track), isPlaying: false, progressMs: 0, playedAt: last.played_at, fetchedAt };
 }
 
 export async function getTopTracks(): Promise<Track[]> {
-  const page = await api<Paged<SpotifyTrack>>("/me/top/tracks?time_range=short_term&limit=20");
+  const page = await api<Paged<SpotifyTrack>>("/me/top/tracks?time_range=short_term&limit=20", 3600);
   return page?.items.map(toTrack) ?? [];
 }
 
 export async function getTopArtists(): Promise<Artist[]> {
-  const page = await api<Paged<SpotifyArtist>>("/me/top/artists?time_range=short_term&limit=10");
+  const page = await api<Paged<SpotifyArtist>>("/me/top/artists?time_range=short_term&limit=10", 3600);
   return (
     page?.items.map((artist) => ({
       id: artist.id,

@@ -99,7 +99,8 @@ async function fromItunes(title: string, artist: string): Promise<SongMatch | nu
   for (const song of body?.results ?? []) {
     if (!song.previewUrl || !overlaps(normalise(song.artistName), wantArtist)) continue;
     const got = normalise(song.trackName);
-    const score = got === wantTitle ? 2 : overlaps(got, wantTitle) ? 1 : 0;
+    // The exact title beats a remix or live version that only matches once trimmed.
+    const score = song.trackName.toLowerCase() === title.toLowerCase() ? 3 : got === wantTitle ? 2 : overlaps(got, wantTitle) ? 1 : 0;
     if (score > (best?.score ?? 0)) best = { song, score };
   }
   if (!best) return null;

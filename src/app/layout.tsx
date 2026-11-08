@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cossette_Titre, IBM_Plex_Mono, Instrument_Serif, Inter_Tight } from "next/font/google";
 import localFont from "next/font/local";
+import { TrackHome } from "@/components/HomeLink";
 import { LinkBar } from "@/components/LinkBar";
 import { Stages } from "@/components/stage/Stages";
 import { site } from "@/content/site";
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <LinkBar />
         <main>{children}</main>
         <Stages />
+        <TrackHome />
       </body>
     </html>
   );

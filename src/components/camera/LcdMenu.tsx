@@ -24,7 +24,7 @@ export function Battery() {
   );
 }
 
-type Props = { episodes: Episode[]; cursor: number; onPick: (index: number) => void };
+type Props = { episodes: Episode[]; cursor: number; opening: number | null; onPick: (index: number) => void };
 
 /**
  * The PLAYBACK grid: six thumbnails a page, the highlighted one's details along
@@ -32,7 +32,7 @@ type Props = { episodes: Episode[]; cursor: number; onPick: (index: number) => v
  * plays a silent preview. On touch there's no hover, so the first tap previews
  * and a second tap on the same one opens it.
  */
-export function LcdMenu({ episodes, cursor, onPick }: Props) {
+export function LcdMenu({ episodes, cursor, opening, onPick }: Props) {
   const pointer = useRef("mouse");
   const page = Math.floor(cursor / PAGE_SIZE);
   const pages = Math.max(1, Math.ceil(episodes.length / PAGE_SIZE));
@@ -79,6 +79,9 @@ export function LcdMenu({ episodes, cursor, onPick }: Props) {
                     playsInline
                     className="absolute inset-0 h-full w-full object-cover"
                   />
+                )}
+                {opening === index && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-[1.3em]">▶ opening</span>
                 )}
                 <span className="absolute bottom-[0.8cqw] left-[0.8cqw] [text-shadow:0_1px_2px_#000]">
                   {String(index + 1).padStart(4, "0")}

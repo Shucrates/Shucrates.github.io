@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion, type Variants } from "framer-motion";
-import Link from "next/link";
+import { HomeLink } from "@/components/HomeLink";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { posterImage, type Poster } from "@/content/posters";
 import { trapTab } from "@/components/mac/focus";
@@ -74,7 +74,8 @@ export function PosterWall({ posters }: { posters: Poster[] }) {
         className="px-gutter pb-[18dvh] pt-[6dvh]"
         initial="hidden"
         animate="shown"
-        variants={{ hidden: {}, shown: { transition: { staggerChildren: 0.035 } } }}
+        // A beat after the folder opens before the posters come out, so they don't land mid-flight.
+        variants={{ hidden: {}, shown: { transition: { delayChildren: 0.45, staggerChildren: 0.045 } } }}
       >
         <header className="text-center">
           <motion.h1
@@ -110,12 +111,11 @@ export function PosterWall({ posters }: { posters: Poster[] }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1, transition: { delay: 0.4, duration: 0.4 } }}
       >
-        <Link
-          href="/"
+        <HomeLink
           className="pointer-events-auto bg-bg/85 px-2 py-1 font-condensed text-3xl leading-none tracking-[-0.01em] backdrop-blur-sm hover:text-blue md:text-[min(2.6vw,4.2dvh)]"
         >
           [go back]
-        </Link>
+        </HomeLink>
       </motion.div>
 
       <AnimatePresence>
@@ -147,20 +147,28 @@ type TileProps = {
 
 /** A poster in the grid. Its number swaps for its name on hover or focus. */
 function PosterTile({ poster, number, onOpen, hidden }: TileProps) {
+  // Each tile shimmers until its image arrives, then the poster fades in over it.
+  const [loaded, setLoaded] = useState(false);
+  const image = useCallback((element: HTMLImageElement | null) => {
+    if (element?.complete && element.naturalWidth) setLoaded(true);
+  }, []);
   return (
     <button type="button" onClick={onOpen} className="group flex w-full flex-col items-center gap-3 focus-visible:outline-offset-8">
       <span className="flex aspect-[4/5] w-full items-end justify-center">
         <motion.span
           layoutId={`poster-${poster.id}`}
-          className="block w-full overflow-hidden rounded-[3px] shadow-[0_6px_18px_rgba(0,0,0,0.12)] transition-[translate,box-shadow] duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_14px_30px_rgba(0,0,0,0.18)]"
+          className="relative block w-full overflow-hidden rounded-[3px] shadow-[0_6px_18px_rgba(0,0,0,0.12)] transition-[translate,box-shadow] duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_14px_30px_rgba(0,0,0,0.18)]"
           style={{ aspectRatio: `${poster.width} / ${poster.height}`, opacity: hidden ? 0 : 1 }}
         >
+          {!loaded && <span aria-hidden className="poster-shimmer absolute inset-0" />}
           {/* eslint-disable-next-line @next/next/no-img-element -- already sized in public/posters */}
           <img
+            ref={image}
             src={posterImage(poster, "thumb")}
             alt=""
             loading={number > 8 ? "lazy" : undefined}
-            className="h-full w-full object-cover"
+            onLoad={() => setLoaded(true)}
+            className={`h-full w-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
             draggable={false}
           />
         </motion.span>

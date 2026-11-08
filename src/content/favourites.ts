@@ -9,9 +9,13 @@ export type Favourite = {
  * All-time favourites, in the order the iPod lists them. Artwork and a 30s preview
  * are looked up from the title and artist, so spell them as they appear on Spotify.
  */
-// TODO: replace with my real favourites.
 export const favourites: Favourite[] = [
-  { title: "Replace Me", artist: "Placeholder Artist", note: "Swap in a real song in src/content/favourites.ts" },
-  { title: "Another Song", artist: "Placeholder Artist" },
-  { title: "One More Song", artist: "Placeholder Artist" },
+  { title: "Godspeed", artist: "Frank Ocean" },
+  { title: "Gravity", artist: "John Mayer" },
+  { title: "SLOW DANCING IN THE DARK", artist: "Joji" },
+  { title: "Choo Lo", artist: "The Local Train" },
+  { title: "Fix You", artist: "Coldplay" },
+  { title: "SUMMER", artist: "BROCKHAMPTON" },
+  { title: "Count Me Out", artist: "Kendrick Lamar" },
+  { title: "Leaving Toronto", artist: "Mustafa" },
 ];

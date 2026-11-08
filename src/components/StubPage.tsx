@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HomeLink } from "@/components/HomeLink";
 
 type Props = {
   eyebrow: string;
@@ -12,12 +12,11 @@ export function StubPage({ eyebrow, title, description }: Props) {
       <p className="font-label text-xs uppercase tracking-wider text-ink-muted">{eyebrow}</p>
       <h1 className="font-display text-5xl font-semibold tracking-tight md:text-7xl">{title}</h1>
       <p className="max-w-prose text-lg text-ink-muted">{description}</p>
-      <Link
-        href="/"
+      <HomeLink
         className="w-fit font-label text-sm uppercase tracking-wider underline-offset-4 hover:underline"
       >
         ← back to the space
-      </Link>
+      </HomeLink>
     </section>
   );
 }

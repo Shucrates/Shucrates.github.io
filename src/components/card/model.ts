@@ -28,6 +28,39 @@ function roundedRect(width: number, height: number, radius: number) {
   return shape;
 }
 
+/**
+ * Gloss on a laminated print, like the posters': a thin band and a soft highlight that slide
+ * across as the card leans, with the far side a little dimmer, fading out when it faces you square.
+ */
+function glossMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { lean: { value: new THREE.Vector2() } },
+    transparent: true,
+    depthWrite: false,
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec2 lean;
+      varying vec2 vUv;
+      void main() {
+        float lit = min(1.0, length(lean) * 5.0);
+        // The band runs at a slant and slides sideways; the highlight sits on the side tipped away.
+        float across = dot(vUv - 0.5, normalize(vec2(0.9, 0.42))) + 0.5;
+        float band = 1.0 - smoothstep(0.0, 0.1, abs(across - (0.5 + clamp(lean.x * 2.4, -0.6, 0.6))));
+        vec2 shape = vec2(1.0, ${HEIGHT});
+        float near = distance(vUv * shape, (0.5 + clamp(lean * 2.0, -0.45, 0.45)) * shape);
+        float light = lit * (band * 0.22 + (1.0 - smoothstep(0.0, 0.5, near)) * 0.3);
+        // Pale paper can't get much whiter, so the far side dims a touch to show the light.
+        float shade = lit * 0.09 * smoothstep(0.2, 1.0, near);
+        gl_FragColor = vec4(vec3(light / max(light + shade, 0.001)), light + shade);
+      }`,
+  });
+}
+
 /** One printed side, with the artwork stretched over the whole shape. */
 async function side(shape: THREE.Shape, url: string) {
   const geometry = new THREE.ShapeGeometry(shape, 8);
@@ -42,7 +75,15 @@ async function side(shape: THREE.Shape, url: string) {
   texture.anisotropy = 8;
   // Unlit and untoned so the print keeps its exact colours; the edge and shadow give it depth.
   const material = new THREE.MeshBasicMaterial({ map: texture, alphaTest: 0.5, toneMapped: false });
-  return new THREE.Mesh(geometry, material);
+  const print = new THREE.Mesh(geometry, material);
+  const gloss = new THREE.Mesh(geometry, glossMaterial());
+  gloss.position.z = 0.0005;
+  // Leans the sheen with the card: where the camera sits relative to this face.
+  gloss.onBeforeRender = (_renderer, _scene, camera) => {
+    const toCamera = gloss.worldToLocal(camera.getWorldPosition(new THREE.Vector3())).normalize();
+    (gloss.material as THREE.ShaderMaterial).uniforms.lean.value.set(-toCamera.x, -toCamera.y);
+  };
+  return new THREE.Group().add(print, gloss);
 }
 
 /** Builds the NFC card: a thin rounded slab with the front and back artwork on its faces. */

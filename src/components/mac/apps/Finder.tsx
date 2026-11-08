@@ -2,9 +2,11 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { TAGS, type Project, type Tag } from "@/content/projects";
+import { experience } from "@/content/experience";
+import { projects as allProjects, TAGS, type Project, type Tag } from "@/content/projects";
 
-export type Filter = Tag | "All";
+/** A tag, all projects, or the Experience folder (roles, not projects). */
+export type Filter = Tag | "All" | "Experience";
 
 /** Finder's tag colours. */
 const TAG_COLOURS: Record<Tag, string> = {
@@ -31,10 +33,10 @@ export function useGallery(projects: Project[], open: string | null, from: { fil
     if (open) {
       setChosen(open);
       const project = projects.find((p) => p.id === open);
-      if (project && filter !== "All" && !project.tags.includes(filter)) setFilter("All");
+      if (project && filter !== "All" && !project.tags.includes(filter as Tag)) setFilter("All");
     }
   }
-  const list = filter === "All" ? projects : projects.filter((project) => project.tags.includes(filter));
+  const list = filter === "Experience" ? [] : filter === "All" ? projects : projects.filter((project) => project.tags.includes(filter as Tag));
   // A filter that hides the selection selects its first project instead.
   const index = Math.max(0, list.findIndex((project) => project.id === chosen));
   const project = list[index] ?? null;
@@ -50,6 +52,11 @@ export function useGallery(projects: Project[], open: string | null, from: { fil
     index,
     project,
     select: (project: Project) => setChosen(project.id),
+    /** Shows a project in the Projects folder, from the Experience folder. */
+    reveal: (id: string) => {
+      setFilter("All");
+      setChosen(id);
+    },
     previous: () => go(-1),
     next: () => go(1),
   };
@@ -92,7 +99,7 @@ export function GalleryToolbar({ gallery }: { gallery: Gallery }) {
       onForward={index < list.length - 1 ? next : undefined}
       trailing={
         <p className="font-mono text-[12px] tabular-nums text-black/50" aria-live="polite">
-          {list.length ? `${pad(index + 1)} / ${pad(list.length)}` : "00 / 00"}
+          {filter === "Experience" ? "" : list.length ? `${pad(index + 1)} / ${pad(list.length)}` : "00 / 00"}
         </p>
       }
     />
@@ -115,7 +122,8 @@ type Props = {
  * ←/→ step through, Space takes a quick look, Return (or a double click) opens it.
  */
 export function Finder({ gallery, active, paused, onOpen, onQuickLook }: Props) {
-  const { filter, setFilter, list, project, select, previous, next } = gallery;
+  const { filter, setFilter, list, select, previous, next } = gallery;
+  const project = filter === "Experience" ? null : gallery.project;
   const strip = useRef<HTMLDivElement>(null);
   const thumbs = useRef<Record<string, HTMLDivElement | null>>({});
   const reducedMotion = useReducedMotion();
@@ -167,6 +175,20 @@ export function Finder({ gallery, active, paused, onOpen, onQuickLook }: Props) 
           ))}
         </div>
         <div>
+          <p className="px-2 pb-1 text-[11px] font-semibold text-black/40">Locations</p>
+          <button
+            type="button"
+            aria-pressed={filter === "Experience"}
+            onClick={() => setFilter("Experience")}
+            className={`flex w-full items-center gap-2 rounded-[5px] px-2 py-[3px] text-left ${
+              filter === "Experience" ? "bg-black/10 font-medium" : "text-black/80 hover:bg-black/5"
+            }`}
+          >
+            <span aria-hidden className="text-[12px] text-[#0a84ff]">▣</span>
+            Experience
+          </button>
+        </div>
+        <div>
           <p className="px-2 pb-1 text-[11px] font-semibold text-black/40">Tags</p>
           {(["All", ...TAGS] as const).map((tag) => (
             <button
@@ -189,7 +211,11 @@ export function Finder({ gallery, active, paused, onOpen, onQuickLook }: Props) 
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col bg-white">
-        {project ? (
+        {filter === "Experience" ? (
+          <Experience
+            onPick={gallery.reveal}
+          />
+        ) : project ? (
           <>
             <div className="relative min-h-0 flex-1 p-6">
               <AnimatePresence initial={false}>
@@ -252,6 +278,46 @@ export function Finder({ gallery, active, paused, onOpen, onQuickLook }: Props) 
     </div>
   );
 }
+
+/** Finder's Experience folder: where I've worked, each role linking to its case studies in Projects. */
+function Experience({ onPick }: { onPick: (id: string) => void }) {
+  return (
+    <div className="h-full overflow-y-auto px-8 py-7">
+      <h2 className="text-[22px] font-semibold tracking-[-0.02em]">Experience</h2>
+      <ol className="mt-5">
+        {experience.map((role) => (
+          <li key={role.id} className="grid grid-cols-[160px_minmax(0,1fr)] gap-6 border-t border-black/10 py-5">
+            <div className="text-[12px] text-black/50">
+              <p className="font-medium text-black/70">{role.dates}</p>
+              <p>{role.place}</p>
+            </div>
+            <div>
+              <p className="text-[15px] font-semibold">{role.title}</p>
+              <p className="text-black/55">{role.company}</p>
+              <p className="mt-2 max-w-[60ch] leading-relaxed text-black/75">{role.summary}</p>
+              {role.projects.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {role.projects.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => onPick(id)}
+                      className="flex items-center gap-1 rounded-[6px] border border-black/10 bg-[#f5f5f7] px-[10px] py-[4px] font-medium hover:bg-[#0a84ff] hover:text-white"
+                    >
+                      <span aria-hidden>📁</span> {projectTitle(id)} →
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+const projectTitle = (id: string) => allProjects.find((project) => project.id === id)?.title ?? id;
 
 /** The selected project, playing muted on a loop; a still under reduced motion. */
 function Preview({ project, still, paused }: { project: Project; still: boolean; paused: boolean }) {

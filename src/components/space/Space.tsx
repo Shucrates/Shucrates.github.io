@@ -6,6 +6,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BagSpin, CLOSING_SCALE } from "@/components/hero/BagSpin";
 import { launchOnClick } from "@/components/stage/ObjectStage";
 import { stages } from "@/components/stage/Stages";
+import { useMedia } from "@/components/stage/useMedia";
+import { useBackSteps } from "@/components/useBackSteps";
 import type { SpaceObject } from "@/content/objects";
 import { site } from "@/content/site";
 import { ObjectLink } from "./ObjectLink";
@@ -115,6 +117,38 @@ export function Space({ objects, origin, bagArriving, onClosed }: Props) {
   // The bag and [close bag] act as one control: hovering either wakes both.
   const [bagActive, setBagActive] = useState(false);
   const bag = useRef<HTMLButtonElement>(null);
+  // Phones show one object at a time, swiped through; the one in view plays its hover animation.
+  // It loops: the objects are reordered (CSS `order`) so the current one always sits in the middle
+  // slot with others either side, and the row jumps back to that slot each time a swipe settles.
+  const phone = useMedia("(max-width: 767px)");
+  const carousel = useRef<HTMLUListElement>(null);
+  const middle = Math.floor(objects.length / 2);
+  const [base, setBase] = useState(0);
+  // Slots moved from the middle mid-swipe, so the name changes as soon as the next object is in view.
+  const [moved, setMoved] = useState(0);
+  const wrap = (i: number) => ((i % objects.length) + objects.length) % objects.length;
+  const current = wrap(base + moved);
+  const slotOf = (i: number) => wrap(i - base + middle);
+  const settleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const go = (by: number) => {
+    const list = carousel.current;
+    if (list) list.scrollTo({ left: (middle + by) * list.clientWidth, behavior: "smooth" });
+  };
+  const onCarouselScroll = (list: HTMLUListElement) => {
+    const by = Math.round(list.scrollLeft / list.clientWidth) - middle;
+    setMoved(by);
+    clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => {
+      if (by === 0) return;
+      setBase((b) => wrap(b + by));
+      setMoved(0);
+    }, 140);
+  };
+  // Back to the middle slot (now the new current object) without animating; first run is before the throw measures slots.
+  useLayoutEffect(() => {
+    const list = carousel.current;
+    if (list && phone) list.scrollLeft = middle * list.clientWidth;
+  }, [base, phone, middle]);
   const hidden = { opacity: 0, y: 24 };
   const shown = { opacity: 1, y: 0 };
 
@@ -170,12 +204,13 @@ export function Space({ objects, origin, bagArriving, onClosed }: Props) {
   };
 
   // The index says what each object holds; the title names the object itself.
-  const label = ready ? objects.find((object) => object.id === active)?.name : undefined;
+  const label = ready ? objects.find((object) => object.id === (phone ? objects[current]?.id : active))?.name : undefined;
   const title = label ? `shubham’s [${label}]` : site.spaceTitle;
   /** "shubham’s [" stays put; only the word in brackets scrambles. */
   const keep = site.spaceTitle.indexOf("[") + 1;
   const closing = packFrom !== null;
   const settled = offsets || !intro;
+  const shownId = phone ? (ready && !closing ? objects[current]?.id ?? null : null) : active;
 
   const close = () => {
     const rect = bag.current?.getBoundingClientRect();
@@ -188,6 +223,9 @@ export function Space({ objects, origin, bagArriving, onClosed }: Props) {
       y: rect.bottom - rect.height * CLOSING_SCALE * 0.6,
     });
   };
+
+  // The browser's back button closes the bag.
+  useBackSteps("bag", closing ? 0 : 1, close);
 
   const activeHandlers = (id: string) => (isActive: boolean) =>
     setActive((current) => (isActive ? id : current === id ? null : current));
@@ -206,7 +244,7 @@ export function Space({ objects, origin, bagArriving, onClosed }: Props) {
               onPointerLeave={() => onActiveChange(false)}
               onFocus={() => onActiveChange(true)}
               onBlur={() => onActiveChange(false)}
-              className={`underline-offset-4 hover:text-blue ${active === object.id ? "text-blue" : ""}`}
+              className={`underline-offset-4 hover:text-blue ${shownId === object.id ? "text-blue" : ""}`}
             >
               {pad(object.order)} {object.label}
             </Link>
@@ -233,24 +271,28 @@ export function Space({ objects, origin, bagArriving, onClosed }: Props) {
       </motion.nav>
 
       {/* Desktop: objects sit at their config x/y around the title, centred on the page between
-          the index and the bottom bar (both pinned, so neither pushes it off centre). Mobile: two-column grid. */}
+          the index and the bottom bar (both pinned, so neither pushes it off centre). Mobile: a swipeable row, one object at a time. */}
       <section
         aria-label="Portfolio sections"
-        className="flex flex-col gap-10 [--object-unit:28vw] md:absolute md:inset-x-gutter md:top-[12dvh] md:bottom-[12dvh] md:block md:[container-type:size] md:[--object-unit:min(12cqw,22cqh)]"
+        className="flex flex-col gap-6 [--object-unit:48vw] md:absolute md:inset-x-gutter md:top-[12dvh] md:bottom-[12dvh] md:block md:[container-type:size] md:[--object-unit:min(12cqw,22cqh)]"
       >
         <motion.div
           className="text-center md:absolute md:inset-x-0 md:top-1/2 md:-translate-y-1/2"
           animate={{ opacity: closing ? 0 : 1 }}
           transition={{ duration: 0.3 }}
         >
-          <h1 className="font-condensed text-6xl leading-none tracking-[-0.01em] text-blue md:text-[min(7.5cqw,17cqh)]">
+          <h1 className="font-condensed text-[12vw] leading-none tracking-[-0.01em] text-blue md:text-[min(7.5cqw,17cqh)]">
             {/* Waits for the opened bag to tuck itself away before scrambling in. */}
             {(!intro || !bagArriving) && (
               <ScrambleText text={title} play={intro} keep={keep} duration={0.5} onSettled={() => setReady(true)} />
             )}
           </h1>
         </motion.div>
-        <ul className="grid grid-cols-2 gap-x-4 gap-y-10 md:contents">
+        <ul
+          ref={carousel}
+          onScroll={(event) => phone && onCarouselScroll(event.currentTarget)}
+          className="-mx-gutter flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] md:contents"
+        >
           {objects.map((object, i) => {
             const keyframes = motionFor(object.id, i);
             return (
@@ -268,19 +310,35 @@ export function Space({ objects, origin, bagArriving, onClosed }: Props) {
                     });
                 }}
                 // Above the camera's 3D canvas (z-10) so labels stay readable.
-                className="relative z-[11] flex justify-center md:absolute md:top-(--y) md:left-(--x) md:-translate-x-1/2 md:-translate-y-1/2"
+                className="relative z-[11] flex w-full shrink-0 snap-center justify-center py-4 md:w-auto md:py-0 md:absolute md:top-(--y) md:left-(--x) md:-translate-x-1/2 md:-translate-y-1/2"
                 style={
                   {
                     "--x": `${object.x}%`,
                     "--y": `${object.y}%`,
+                    order: phone ? slotOf(i) : undefined,
                   } as React.CSSProperties
                 }
               >
-                <ObjectLink object={object} active={active === object.id} onActiveChange={activeHandlers(object.id)} />
+                <ObjectLink object={object} active={shownId === object.id} onActiveChange={activeHandlers(object.id)} />
               </motion.li>
             );
           })}
         </ul>
+        <motion.div
+          className="flex items-center justify-center gap-6 font-condensed text-3xl leading-none tracking-[-0.01em] md:hidden"
+          animate={{ opacity: closing ? 0 : 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <button type="button" aria-label="Previous object" onClick={() => go(-1)} className="min-h-11 min-w-11">
+            ←
+          </button>
+          <span aria-live="polite" className="min-w-[6em] text-center">
+            {objects[current]?.name}
+          </span>
+          <button type="button" aria-label="Next object" onClick={() => go(1)} className="min-h-11 min-w-11">
+            →
+          </button>
+        </motion.div>
       </section>
 
       <motion.div

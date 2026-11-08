@@ -2,11 +2,12 @@ import type { Credit as CreditType } from "@/content/site";
 
 /**
  * Attribution for a third-party asset (CC BY), tucked into the corner of the page that shows it.
- * `className` places and colours it somewhere else.
+ * `className` places and colours it somewhere else. On a phone it shrinks to one line under the
+ * page's bottom links.
  */
 export function Credit({
   credit,
-  className = "bottom-4 left-gutter rounded-pill bg-bg px-2 py-0.5 text-ink-muted",
+  className = "bottom-4 left-gutter rounded-pill bg-bg px-2 py-0.5 text-ink-muted max-md:bottom-1 max-md:text-[8px] max-md:whitespace-nowrap",
 }: {
   credit: CreditType;
   className?: string;

@@ -94,7 +94,7 @@ function Layout({ top, track, note, progress }: LayoutProps) {
           {track.note && <p className="mt-[3px] line-clamp-2 text-[11px] italic text-[#4d535b]">{track.note}</p>}
           <div className="mt-auto text-[9.5px] text-[#6b7078]">
             {note && <p>{note}</p>}
-            <a href={track.spotifyUrl} target="_blank" rel="noopener noreferrer" tabIndex={-1} className="text-[#1f6fd1]">
+            <a href={track.spotifyUrl} target="_blank" rel="noopener noreferrer" tabIndex={-1} className="cursor-pointer text-[#1f6fd1] underline">
               Open in Spotify ↗
             </a>
           </div>
