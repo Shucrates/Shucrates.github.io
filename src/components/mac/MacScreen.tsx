@@ -15,7 +15,6 @@ import type { Project } from "@/content/projects";
 import { Desktop, forgetSleep, sleepingMac, sleepMac } from "./Desktop";
 import { ScaleContext, SCREEN_WIDTH } from "./scale";
 
-// TODO: swap in my own wallpaper.
 const WALLPAPER = "/mac/wallpaper.webp";
 
 /** Sleep blanks the screen at once; shutting down closes everything first, then goes dark. */
